@@ -5,6 +5,7 @@ from .gemini_image_node import DigitGeminiImage
 from .veo_video_node import DigitVeoVideo
 from .video_saver_node import DigitVideoSaver
 from .drag_crop_node import DigitDragCrop, DigitCropInfo
+from .srt_maker_node import DigitSRTMaker
 
 NODE_CLASS_MAPPINGS = {
     "DigitLLMQuery": LLMQueryNode,
@@ -15,6 +16,7 @@ NODE_CLASS_MAPPINGS = {
     "DigitVideoSaver": DigitVideoSaver,
     "DigitDragCrop": DigitDragCrop,
     "DigitCropInfo": DigitCropInfo,
+    "DigitSRTMaker": DigitSRTMaker,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -26,6 +28,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "DigitVideoSaver": "DIGIT Video Saver",
     "DigitDragCrop": "DIGIT Drag Crop",
     "DigitCropInfo": "DIGIT Crop Info",
+    "DigitSRTMaker": "DIGIT SRT Maker",
 }
 
 WEB_DIRECTORY = "./web"

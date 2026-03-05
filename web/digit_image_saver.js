@@ -5,7 +5,7 @@ app.registerExtension({
     name: "DIGIT.ImageSaver",
 
     async nodeCreated(node) {
-        if (node.comfyClass !== "DigitImageSaver" && node.comfyClass !== "DigitImageLoader" && node.comfyClass !== "DigitVideoSaver") return;
+        if (node.comfyClass !== "DigitImageSaver" && node.comfyClass !== "DigitImageLoader" && node.comfyClass !== "DigitVideoSaver" && node.comfyClass !== "DigitSRTMaker") return;
 
         const rootWidget = node.widgets.find(w => w.name === "projekts_root");
         const projectWidget = node.widgets.find(w => w.name === "project");
