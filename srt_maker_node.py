@@ -70,14 +70,43 @@ class _HTMLTextExtractor(HTMLParser):
         return "".join(self._parts)
 
 
+def _fetch_google_doc_authenticated(doc_id):
+    """Fetch a Google Doc using application default credentials (Drive API)."""
+    import google.auth
+    import google.auth.transport.requests
+
+    credentials, _ = google.auth.default(
+        scopes=["https://www.googleapis.com/auth/drive.readonly"]
+    )
+    credentials.refresh(google.auth.transport.requests.Request())
+
+    export_url = f"https://www.googleapis.com/drive/v3/files/{doc_id}/export?mimeType=text/plain"
+    req = urllib.request.Request(
+        export_url,
+        headers={
+            "Authorization": f"Bearer {credentials.token}",
+            "User-Agent": "ComfyUI-DIGIT/1.0",
+        },
+    )
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        return resp.read().decode("utf-8", errors="replace")
+
+
 def _fetch_url_text(url):
-    """Fetch text content from a URL. Handles Google Docs specially."""
+    """Fetch text content from a URL. Handles Google Docs with GCP auth."""
+    # Google Docs: use Drive API with application default credentials
     gdoc_match = re.match(
         r"https?://docs\.google\.com/document/d/([a-zA-Z0-9_-]+)", url
     )
     if gdoc_match:
         doc_id = gdoc_match.group(1)
-        url = f"https://docs.google.com/document/d/{doc_id}/export?format=txt"
+        print(f"[DigitSRTMaker] Detected Google Doc ID: {doc_id}")
+        try:
+            return _fetch_google_doc_authenticated(doc_id)
+        except Exception as e:
+            print(f"[DigitSRTMaker] Authenticated fetch failed ({e}), trying public export...")
+            # Fall through to public fetch
+            url = f"https://docs.google.com/document/d/{doc_id}/export?format=txt"
 
     req = urllib.request.Request(url, headers={"User-Agent": "ComfyUI-DIGIT/1.0"})
     with urllib.request.urlopen(req, timeout=30) as resp:
