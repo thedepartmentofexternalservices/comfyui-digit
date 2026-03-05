@@ -1,0 +1,7 @@
+[project]
+name = "comfyui-digit"
+version = "2.0.0"
+description = "DIGIT nodes for ComfyUI — image saver/loader, LLM query, and more"
+license = "MIT"
+requires-python = ">=3.9"
+dependencies = ["requests", "google-auth"]
