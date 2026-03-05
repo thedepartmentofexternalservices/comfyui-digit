@@ -71,20 +71,25 @@ class _HTMLTextExtractor(HTMLParser):
 
 
 def _fetch_google_doc_authenticated(doc_id):
-    """Fetch a Google Doc using application default credentials (Drive API)."""
-    import google.auth
-    import google.auth.transport.requests
+    """Fetch a Google Doc using gcloud user credentials."""
+    import subprocess
+    import json
 
-    credentials, _ = google.auth.default(
-        scopes=["https://www.googleapis.com/auth/drive.readonly"]
+    # Get access token directly from gcloud CLI — works with user login
+    result = subprocess.run(
+        ["gcloud", "auth", "print-access-token"],
+        capture_output=True, text=True, timeout=10,
     )
-    credentials.refresh(google.auth.transport.requests.Request())
+    if result.returncode != 0:
+        raise RuntimeError(f"gcloud auth failed: {result.stderr.strip()}")
+
+    token = result.stdout.strip()
 
     export_url = f"https://www.googleapis.com/drive/v3/files/{doc_id}/export?mimeType=text/plain"
     req = urllib.request.Request(
         export_url,
         headers={
-            "Authorization": f"Bearer {credentials.token}",
+            "Authorization": f"Bearer {token}",
             "User-Agent": "ComfyUI-DIGIT/1.0",
         },
     )
