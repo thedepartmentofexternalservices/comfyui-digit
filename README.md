@@ -348,8 +348,13 @@ Companion node for DIGIT Drag Crop. Takes the CROP_JSON string output and breaks
 
 ## Installation
 
-### From ComfyUI Registry / Manager
-Search for **"DIGIT"** in the ComfyUI Manager node list.
+### From ComfyUI Manager (Recommended)
+1. Open ComfyUI Manager
+2. Search for **`comfyui-digit`**
+3. Click Install
+4. Restart ComfyUI
+
+All 9 nodes will appear under the **DIGIT** category.
 
 ### Manual
 ```bash
