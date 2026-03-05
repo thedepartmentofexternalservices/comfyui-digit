@@ -17,5 +17,5 @@ dependencies = [
 Repository = "https://github.com/thedepartmentofexternalservices/comfyui-digit"
 
 [tool.comfy]
-PublisherId = "thedepartmentofexternalservices"
+PublisherId = "digit"
 DisplayName = "DIGIT Nodes"
