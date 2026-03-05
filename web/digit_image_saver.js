@@ -5,13 +5,20 @@ app.registerExtension({
     name: "DIGIT.ImageSaver",
 
     async nodeCreated(node) {
-        if (node.comfyClass !== "DigitImageSaver" && node.comfyClass !== "DigitImageLoader" && node.comfyClass !== "DigitVideoSaver" && node.comfyClass !== "DigitSRTMaker") return;
+        const hasShotNodes = ["DigitImageSaver", "DigitImageLoader", "DigitVideoSaver"];
+        const projectOnlyNodes = ["DigitSRTMaker"];
+
+        const isHasShotNode = hasShotNodes.includes(node.comfyClass);
+        const isProjectOnlyNode = projectOnlyNodes.includes(node.comfyClass);
+
+        if (!isHasShotNode && !isProjectOnlyNode) return;
 
         const rootWidget = node.widgets.find(w => w.name === "projekts_root");
         const projectWidget = node.widgets.find(w => w.name === "project");
         const shotWidget = node.widgets.find(w => w.name === "shot");
 
-        if (!rootWidget || !projectWidget || !shotWidget) return;
+        if (!rootWidget || !projectWidget) return;
+        if (isHasShotNode && !shotWidget) return;
 
         // Add a read-only text widget to show the filepath after execution
         const filepathWidget = node.addWidget("text", "filepath_display", "", () => {}, {
@@ -37,11 +44,14 @@ app.registerExtension({
                 if (!projects.includes(projectWidget.value)) {
                     projectWidget.value = projects[0] || "";
                 }
-                await refreshShots();
+                if (isHasShotNode) {
+                    await refreshShots();
+                }
             }
         }
 
         async function refreshShots() {
+            if (!shotWidget) return;
             const root = rootWidget.value;
             const project = projectWidget.value;
             const resp = await api.fetchApi(
@@ -65,10 +75,14 @@ app.registerExtension({
         const origProjectCallback = projectWidget.callback;
         projectWidget.callback = async function(value) {
             if (origProjectCallback) origProjectCallback.call(this, value);
-            await refreshShots();
+            if (isHasShotNode) {
+                await refreshShots();
+            }
         };
 
-        // Initial load of shots for the current project
-        await refreshShots();
+        // Initial load
+        if (isHasShotNode) {
+            await refreshShots();
+        }
     }
 });

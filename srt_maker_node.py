@@ -191,8 +191,6 @@ class DigitSRTMaker:
 
         first_root = available_roots[0]
         projects = scan_projects(first_root)
-        first_project = projects[0] if projects else ""
-        shots = scan_shots(first_root, first_project)
 
         return {
             "required": {
@@ -202,9 +200,8 @@ class DigitSRTMaker:
                     "placeholder": "Paste Google Doc or web URL here",
                 }),
                 "extra_instructions": ("STRING", {
-                    "default": "",
+                    "default": "only include actually spoken word.  look at the script and do not include any words describing people, actors, or stage direction.  figure out only what is actually going to be spoken, and only use that in the SRT file outputs.  The SRT outputs are only for on screen dialogue.",
                     "multiline": True,
-                    "placeholder": "Optional: extra instructions for Gemini (e.g. 'only include lines from JOHN')",
                 }),
                 "words_per_second": ("FLOAT", {
                     "default": 2.5,
@@ -214,9 +211,6 @@ class DigitSRTMaker:
                 }),
                 "projekts_root": (available_roots,),
                 "project": (projects,),
-                "shot": (shots,),
-                "subfolder": ("STRING", {"default": "comfy"}),
-                "task": ("STRING", {"default": "srt"}),
                 "filename": ("STRING", {"default": "dialogue"}),
             },
             "optional": {
@@ -264,7 +258,7 @@ class DigitSRTMaker:
         return project, region
 
     def make_srt(self, script_url, extra_instructions, words_per_second,
-                 projekts_root, project, shot, subfolder, task, filename,
+                 projekts_root, project, filename,
                  script_text="", gcp_project_id="", gcp_region="global"):
 
         from google import genai
@@ -332,11 +326,10 @@ class DigitSRTMaker:
             raise ValueError("[DigitSRTMaker] Gemini returned empty SRT content.")
 
         # Save
-        prefix = project[:5]
-        target_dir = os.path.join(projekts_root, project, "shots", shot, subfolder, task)
+        target_dir = os.path.join(projekts_root, project, "assets", "auto_srt")
         os.makedirs(target_dir, exist_ok=True)
 
-        srt_filename = f"{prefix}_{shot}_{task}_{filename}.srt"
+        srt_filename = f"{filename}.srt"
         filepath = os.path.join(target_dir, srt_filename)
 
         with open(filepath, "w", encoding="utf-8") as f:
