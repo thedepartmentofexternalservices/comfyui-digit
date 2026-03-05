@@ -4,6 +4,7 @@ from .image_loader_node import DigitImageLoader
 from .gemini_image_node import DigitGeminiImage
 from .veo_video_node import DigitVeoVideo
 from .video_saver_node import DigitVideoSaver
+from .drag_crop_node import DigitDragCrop, DigitCropInfo
 
 NODE_CLASS_MAPPINGS = {
     "DigitLLMQuery": LLMQueryNode,
@@ -12,6 +13,8 @@ NODE_CLASS_MAPPINGS = {
     "DigitGeminiImage": DigitGeminiImage,
     "DigitVeoVideo": DigitVeoVideo,
     "DigitVideoSaver": DigitVideoSaver,
+    "DigitDragCrop": DigitDragCrop,
+    "DigitCropInfo": DigitCropInfo,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -21,6 +24,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "DigitGeminiImage": "DIGIT Gemini Image",
     "DigitVeoVideo": "DIGIT Veo Video",
     "DigitVideoSaver": "DIGIT Video Saver",
+    "DigitDragCrop": "DIGIT Drag Crop",
+    "DigitCropInfo": "DIGIT Crop Info",
 }
 
 WEB_DIRECTORY = "./web"
