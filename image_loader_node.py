@@ -4,12 +4,41 @@ import re
 
 import folder_paths
 import numpy as np
+from aiohttp import web
 
 logger = logging.getLogger("DigitImageLoader")
 from PIL import Image
 from server import PromptServer
 
 from .image_saver_node import PROJEKTS_ROOTS, PROJECT_RE, FRAME_RE, scan_projects, scan_shots
+
+IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".exr", ".tif", ".tiff", ".bmp", ".webp"}
+
+
+@PromptServer.instance.routes.get("/digit/browse")
+async def browse_filesystem(request):
+    """List directories and image files at a given path."""
+    path = request.rel_url.query.get("path", "")
+    if not path or not os.path.isdir(path):
+        return web.json_response({"error": "Invalid path", "dirs": [], "files": []}, status=400)
+
+    dirs = []
+    files = []
+    try:
+        for entry in sorted(os.listdir(path)):
+            full = os.path.join(path, entry)
+            if entry.startswith("."):
+                continue
+            if os.path.isdir(full):
+                dirs.append(entry)
+            elif os.path.isfile(full):
+                ext = os.path.splitext(entry)[1].lower()
+                if ext in IMAGE_EXTENSIONS:
+                    files.append(entry)
+    except PermissionError:
+        return web.json_response({"error": "Permission denied", "dirs": [], "files": []}, status=403)
+
+    return web.json_response({"path": path, "dirs": dirs, "files": files})
 
 
 class DigitImageLoader:
