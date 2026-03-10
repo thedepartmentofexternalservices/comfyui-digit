@@ -13,10 +13,12 @@ from .image_saver_node import PROJEKTS_ROOTS, PROJECT_RE, FRAME_RE, scan_project
 
 
 class DigitImageLoader:
-    """Loads the latest rendered frame from a shot/task directory.
+    """Loads images from upload, filepath connection, or PROJEKTS pipeline.
 
-    Pairs with DigitImageSaver — point both at the same shot and task
-    to always have the most recent output available as an IMAGE tensor.
+    Priority order:
+    1. upload_image — drag-and-drop or pick from ComfyUI's input folder
+    2. filepath — connected from another node (e.g. Image Saver)
+    3. Pipeline scan — finds latest frame by shot/task in PROJEKTS
     """
 
     CATEGORY = "DIGIT"
@@ -27,6 +29,10 @@ class DigitImageLoader:
 
     @classmethod
     def INPUT_TYPES(cls):
+        input_dir = folder_paths.get_input_directory()
+        files = [f for f in os.listdir(input_dir) if os.path.isfile(os.path.join(input_dir, f))]
+        files = folder_paths.filter_files_content_types(files, ["image"])
+
         available_roots = [r for r in PROJEKTS_ROOTS if os.path.isdir(r)]
         if not available_roots:
             available_roots = PROJEKTS_ROOTS
@@ -46,6 +52,7 @@ class DigitImageLoader:
                 "format": (["png", "jpg", "exr"],),
             },
             "optional": {
+                "upload_image": (sorted(files), {"image_upload": True, "tooltip": "Upload or select an image. Takes priority over pipeline scan."}),
                 "filepath": ("STRING", {"forceInput": True}),
             },
         }
@@ -60,10 +67,20 @@ class DigitImageLoader:
         return float("nan")
 
     def load_latest(self, projekts_root, project, shot, subfolder, task, format,
-                    filepath=None):
+                    upload_image=None, filepath=None):
         import torch
 
-        # If filepath is connected from the Saver, use it directly
+        # Priority 1: uploaded/selected image from ComfyUI's input folder
+        if upload_image is not None:
+            image_path = folder_paths.get_annotated_filepath(upload_image)
+            if os.path.isfile(image_path):
+                ext = os.path.splitext(image_path)[1].lstrip(".")
+                img_tensor = self._load_image(image_path, ext)
+                preview_info = self._save_preview(img_tensor, image_path)
+                return {"ui": {"images": [preview_info], "filepath_text": [image_path]},
+                        "result": (img_tensor, image_path, 0)}
+
+        # Priority 2: filepath connected from another node (e.g. Image Saver)
         if filepath and os.path.isfile(filepath):
             ext = os.path.splitext(filepath)[1].lstrip(".")
             # Extract frame number from filename if possible
