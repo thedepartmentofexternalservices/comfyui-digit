@@ -52,7 +52,8 @@ class DigitImageLoader:
                 "format": (["png", "jpg", "exr"],),
             },
             "optional": {
-                "upload_image": (sorted(files), {"image_upload": True, "tooltip": "Upload or select an image. Takes priority over pipeline scan."}),
+                "browse_path": ("STRING", {"default": "", "multiline": False, "tooltip": "Absolute path to an image file on the filesystem. Highest priority."}),
+                "upload_image": (sorted(files), {"image_upload": True, "tooltip": "Upload or select an image from ComfyUI's input folder."}),
                 "filepath": ("STRING", {"forceInput": True}),
             },
         }
@@ -67,8 +68,22 @@ class DigitImageLoader:
         return float("nan")
 
     def load_latest(self, projekts_root, project, shot, subfolder, task, format,
-                    upload_image=None, filepath=None):
+                    browse_path=None, upload_image=None, filepath=None):
         import torch
+
+        # Priority 0: browse_path — absolute filesystem path typed by the user
+        if browse_path and browse_path.strip():
+            bp = browse_path.strip()
+            if os.path.isfile(bp):
+                ext = os.path.splitext(bp)[1].lstrip(".")
+                m = FRAME_RE.search(os.path.basename(bp))
+                frame_num = int(m.group(1)) if m else 0
+                img_tensor = self._load_image(bp, ext)
+                preview_info = self._save_preview(img_tensor, bp)
+                return {"ui": {"images": [preview_info], "filepath_text": [bp]},
+                        "result": (img_tensor, bp, frame_num)}
+            else:
+                logger.warning(f"browse_path not found: {bp}")
 
         # Priority 1: uploaded/selected image from ComfyUI's input folder
         if upload_image is not None:
