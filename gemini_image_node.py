@@ -53,7 +53,7 @@ def _png_bytes_to_tensor(png_bytes):
 
 class DigitGeminiImage:
     MODELS = [
-        "gemini-3.1-flash-image",
+        "gemini-3.1-flash-image-preview",
         "gemini-3-pro-image-preview",
         "gemini-2.5-flash-image",
     ]
