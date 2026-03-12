@@ -6,6 +6,7 @@ from .veo_video_node import DigitVeoVideo
 from .video_saver_node import DigitVideoSaver
 from .drag_crop_node import DigitDragCrop, DigitCropInfo
 from .srt_maker_node import DigitSRTMaker
+from .random_prompt_node import DigitRandomPrompt
 
 NODE_CLASS_MAPPINGS = {
     "DigitLLMQuery": LLMQueryNode,
@@ -17,6 +18,7 @@ NODE_CLASS_MAPPINGS = {
     "DigitDragCrop": DigitDragCrop,
     "DigitCropInfo": DigitCropInfo,
     "DigitSRTMaker": DigitSRTMaker,
+    "DigitRandomPrompt": DigitRandomPrompt,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -29,6 +31,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "DigitDragCrop": "DIGIT Drag Crop",
     "DigitCropInfo": "DIGIT Crop Info",
     "DigitSRTMaker": "DIGIT SRT Maker",
+    "DigitRandomPrompt": "DIGIT Random Prompt",
 }
 
 WEB_DIRECTORY = "./web"
