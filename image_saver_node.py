@@ -1,10 +1,10 @@
 import json
 import logging
 import os
-import re
 
 os.environ["OPENCV_IO_ENABLE_OPENEXR"] = "1"
 
+import folder_paths
 import numpy as np
 
 logger = logging.getLogger("DigitImageSaver")
@@ -12,13 +12,7 @@ from PIL import Image, PngImagePlugin
 from aiohttp import web
 from server import PromptServer
 
-PROJEKTS_ROOTS = [
-    "/Volumes/saint/goose/PROJEKTS",
-    "/mnt/lucid/PROJEKTS",
-]
-
-PROJECT_RE = re.compile(r"^\d{5}_")
-FRAME_RE = re.compile(r"\.(\d+)\.[^.]+$")
+from .projekts_utils import PROJEKTS_ROOTS, PROJECT_RE, FRAME_RE, scan_projects, scan_shots, next_frame
 
 
 def sRGBtoLinear(npArray):
@@ -26,44 +20,6 @@ def sRGBtoLinear(npArray):
     less = npArray <= 0.04045
     result = np.where(less, npArray / 12.92, ((npArray + 0.055) / 1.055) ** 2.4)
     return result.astype(np.float32)
-
-
-def scan_projects(projekts_root):
-    """Return sorted list of project folders matching 5-digit prefix pattern."""
-    if not os.path.isdir(projekts_root):
-        return ["(no projects found)"]
-    folders = [
-        d for d in sorted(os.listdir(projekts_root))
-        if os.path.isdir(os.path.join(projekts_root, d)) and PROJECT_RE.match(d)
-    ]
-    return folders if folders else ["(no projects found)"]
-
-
-def scan_shots(projekts_root, project):
-    """Return sorted list of shot folders inside <project>/shots/."""
-    shots_dir = os.path.join(projekts_root, project, "shots")
-    if not os.path.isdir(shots_dir):
-        return ["(no shots found)"]
-    folders = sorted(
-        d for d in os.listdir(shots_dir)
-        if os.path.isdir(os.path.join(shots_dir, d))
-    )
-    return folders if folders else ["(no shots found)"]
-
-
-def next_frame(target_dir, prefix, shot, task, ext, start_frame, frame_pad):
-    """Find highest existing frame number in target_dir and return next frame number."""
-    # Match pattern: <prefix>_<shot>_<task>.<digits>.<ext>
-    pat = re.compile(
-        rf"^{re.escape(prefix)}_{re.escape(shot)}_{re.escape(task)}\.(\d+)\.{re.escape(ext)}$"
-    )
-    max_frame = start_frame - 1
-    if os.path.isdir(target_dir):
-        for f in os.listdir(target_dir):
-            m = pat.match(f)
-            if m:
-                max_frame = max(max_frame, int(m.group(1)))
-    return max_frame + 1
 
 
 @PromptServer.instance.routes.get("/digit/projects")
@@ -171,11 +127,17 @@ class DigitImageSaver:
                 logger.error(f"[DigitImageSaver] SAVE FAILED: {e}", exc_info=True)
                 raise
 
-            ui_images.append({"filename": filename, "subfolder": "", "type": "output"})
-            last_filepath = filepath
+            # Save a preview copy to ComfyUI's temp dir so the UI can display it
+            if show_preview and format != "exr":
+                temp_dir = folder_paths.get_temp_directory()
+                os.makedirs(temp_dir, exist_ok=True)
+                preview_name = f"digit_preview_{filename}"
+                preview_path = os.path.join(temp_dir, preview_name)
+                img_8bit = np.clip(255.0 * img_np[:, :, :3], 0, 255).astype(np.uint8)
+                Image.fromarray(img_8bit, mode="RGB").save(preview_path, format="PNG")
+                ui_images.append({"filename": preview_name, "subfolder": "", "type": "temp"})
 
-        if not show_preview:
-            ui_images = []
+            last_filepath = filepath
 
         return {"ui": {"images": ui_images, "filepath_text": [last_filepath]},
                 "result": (last_filepath,)}

@@ -9,39 +9,12 @@ from server import PromptServer
 from aiohttp import web
 
 from .llm_node import get_gcp_metadata
+from .projekts_utils import PROJEKTS_ROOTS, scan_projects
 
 logger = logging.getLogger(__name__)
 
-PROJEKTS_ROOTS = [
-    "/Volumes/saint/goose/PROJEKTS",
-    "/mnt/lucid/PROJEKTS",
-]
-
-PROJECT_RE = re.compile(r"^\d{5}_")
-
 # Gap between subtitles
 GAP_SECONDS = 0.15
-
-
-def scan_projects(projekts_root):
-    if not os.path.isdir(projekts_root):
-        return ["(no projects found)"]
-    folders = [
-        d for d in sorted(os.listdir(projekts_root))
-        if os.path.isdir(os.path.join(projekts_root, d)) and PROJECT_RE.match(d)
-    ]
-    return folders if folders else ["(no projects found)"]
-
-
-def scan_shots(projekts_root, project):
-    shots_dir = os.path.join(projekts_root, project, "shots")
-    if not os.path.isdir(shots_dir):
-        return ["(no shots found)"]
-    folders = sorted(
-        d for d in os.listdir(shots_dir)
-        if os.path.isdir(os.path.join(shots_dir, d))
-    )
-    return folders if folders else ["(no shots found)"]
 
 
 class _HTMLTextExtractor(HTMLParser):
@@ -177,6 +150,16 @@ SARAH: I'm great, thanks for asking.
 
 
 class DigitSRTMaker:
+    MODELS = [
+        "gemini-3.1-pro-preview",
+        "gemini-3.1-flash-lite-preview",
+        "gemini-3-pro-preview",
+        "gemini-3-flash-preview",
+        "gemini-2.5-pro",
+        "gemini-2.5-flash",
+        "gemini-2.5-flash-lite",
+    ]
+
     CATEGORY = "DIGIT"
     RETURN_TYPES = ("STRING", "STRING")
     RETURN_NAMES = ("srt_filepath", "srt_text")
@@ -194,6 +177,7 @@ class DigitSRTMaker:
 
         return {
             "required": {
+                "model": (cls.MODELS, {"default": "gemini-3.1-pro-preview"}),
                 "script_url": ("STRING", {
                     "default": "",
                     "multiline": False,
@@ -257,7 +241,7 @@ class DigitSRTMaker:
 
         return project, region
 
-    def make_srt(self, script_url, extra_instructions, words_per_second,
+    def make_srt(self, model, script_url, extra_instructions, words_per_second,
                  projekts_root, project, filename,
                  script_text="", gcp_project_id="", gcp_region="global"):
 
@@ -297,7 +281,7 @@ class DigitSRTMaker:
         if extra_instructions and extra_instructions.strip():
             user_prompt += f"\n\nAdditional instructions:\n{extra_instructions.strip()}"
 
-        print(f"[DigitSRTMaker] Sending script ({len(raw_text)} chars) to Gemini 3.1 Flash...")
+        print(f"[DigitSRTMaker] Sending script ({len(raw_text)} chars) to {model}...")
 
         config = types.GenerateContentConfig(
             system_instruction=system_prompt,
@@ -305,7 +289,7 @@ class DigitSRTMaker:
         )
 
         response = client.models.generate_content(
-            model="gemini-3.1-pro-preview",
+            model=model,
             contents=user_prompt,
             config=config,
         )

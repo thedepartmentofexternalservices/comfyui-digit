@@ -1,0 +1,177 @@
+{
+  "last_node_id": 8,
+  "last_link_id": 7,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "DigitBatchCaption",
+      "pos": [100, 100],
+      "size": [400, 500],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "outputs": [
+        {"name": "log", "type": "STRING", "links": [], "slot_index": 0},
+        {"name": "captioned_count", "type": "INT", "links": [], "slot_index": 1}
+      ],
+      "properties": {"Node name for S&R": "DigitBatchCaption"},
+      "widgets_values": ["", "gemini-2.5-flash", "training_detailed", "long", false, "", "", "", "", 1024, 0.4, 2048, 0.5]
+    },
+    {
+      "id": 2,
+      "type": "DigitCaptionViewer",
+      "pos": [100, 650],
+      "size": [400, 350],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "outputs": [
+        {"name": "image", "type": "IMAGE", "links": [], "slot_index": 0},
+        {"name": "caption", "type": "STRING", "links": [], "slot_index": 1},
+        {"name": "filename", "type": "STRING", "links": [], "slot_index": 2},
+        {"name": "status", "type": "STRING", "links": [], "slot_index": 3},
+        {"name": "total", "type": "INT", "links": [], "slot_index": 4}
+      ],
+      "properties": {"Node name for S&R": "DigitCaptionViewer"},
+      "widgets_values": ["", 0]
+    },
+    {
+      "id": 3,
+      "type": "DigitDatasetPrep",
+      "pos": [550, 100],
+      "size": [400, 400],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "outputs": [
+        {"name": "log", "type": "STRING", "links": [], "slot_index": 0},
+        {"name": "processed_count", "type": "INT", "links": [], "slot_index": 1}
+      ],
+      "properties": {"Node name for S&R": "DigitDatasetPrep"},
+      "widgets_values": ["", "", 1024, "fit", "png", 95, false, true, 0, 0, 0]
+    },
+    {
+      "id": 4,
+      "type": "DigitLoraLoader",
+      "pos": [100, 1100],
+      "size": [400, 350],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {"name": "model", "type": "MODEL", "link": null},
+        {"name": "clip", "type": "CLIP", "link": null}
+      ],
+      "outputs": [
+        {"name": "model", "type": "MODEL", "links": [1], "slot_index": 0},
+        {"name": "clip", "type": "CLIP", "links": [2], "slot_index": 1},
+        {"name": "trigger_word", "type": "STRING", "links": [3], "slot_index": 2}
+      ],
+      "properties": {"Node name for S&R": "DigitLoraLoader"},
+      "widgets_values": ["", 1.0, 1.0]
+    },
+    {
+      "id": 5,
+      "type": "DigitPromptCombine",
+      "pos": [550, 1100],
+      "size": [400, 300],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {"name": "trigger", "type": "STRING", "link": 3},
+        {"name": "prompt_1", "type": "STRING", "link": null},
+        {"name": "prompt_2", "type": "STRING", "link": null},
+        {"name": "prompt_3", "type": "STRING", "link": null}
+      ],
+      "outputs": [
+        {"name": "combined", "type": "STRING", "links": [4], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "DigitPromptCombine"},
+      "widgets_values": ["", "", ", "]
+    },
+    {
+      "id": 6,
+      "type": "DigitTextEncode",
+      "pos": [1000, 1100],
+      "size": [300, 200],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {"name": "clip", "type": "CLIP", "link": 2},
+        {"name": "text", "type": "STRING", "link": 4}
+      ],
+      "outputs": [
+        {"name": "CONDITIONING", "type": "CONDITIONING", "links": [], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "DigitTextEncode"},
+      "widgets_values": []
+    },
+    {
+      "id": 7,
+      "type": "DigitGeminiImage",
+      "pos": [550, 650],
+      "size": [400, 400],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "outputs": [
+        {"name": "image", "type": "IMAGE", "links": [], "slot_index": 0},
+        {"name": "text", "type": "STRING", "links": [], "slot_index": 1}
+      ],
+      "properties": {"Node name for S&R": "DigitGeminiImage"},
+      "widgets_values": ["", "gemini-2.5-flash-image", "16:9", "1K", 0, 1.0, "", 1.0, 32, "BLOCK_NONE", "BLOCK_NONE", "BLOCK_NONE", "BLOCK_NONE", "", "global"]
+    },
+    {
+      "id": 8,
+      "type": "DigitRandomPrompt",
+      "pos": [100, 1500],
+      "size": [400, 250],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "outputs": [
+        {"name": "prompt", "type": "STRING", "links": [], "slot_index": 0}
+      ],
+      "properties": {"Node name for S&R": "DigitRandomPrompt"}
+    }
+  ],
+  "links": [
+    [1, 4, 0, 6, 0, "MODEL"],
+    [2, 4, 1, 6, 0, "CLIP"],
+    [3, 4, 2, 5, 0, "STRING"],
+    [4, 5, 0, 6, 1, "STRING"]
+  ],
+  "groups": [
+    {
+      "title": "1. CAPTIONING - Run first to caption your training images",
+      "bounding": [80, 50, 450, 560],
+      "color": "#3f789e"
+    },
+    {
+      "title": "2. DATASET PREP - Resize images for training",
+      "bounding": [530, 50, 450, 460],
+      "color": "#3f789e"
+    },
+    {
+      "title": "3. REVIEW - Step through captioned images",
+      "bounding": [80, 600, 450, 410],
+      "color": "#88A"
+    },
+    {
+      "title": "4. INFERENCE - Use your trained LoRA",
+      "bounding": [80, 1050, 1250, 500],
+      "color": "#3a8a4a"
+    }
+  ],
+  "config": {},
+  "extra": {
+    "ds": {"scale": 0.7, "offset": [0, 0]},
+    "info": {
+      "name": "DIGIT LoRA Training Pipeline",
+      "description": "Complete workflow: caption images -> prep dataset -> (train externally) -> load LoRA -> combine prompt -> generate"
+    }
+  },
+  "version": 0.4
+}

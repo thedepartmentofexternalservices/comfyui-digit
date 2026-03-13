@@ -7,6 +7,12 @@ from .video_saver_node import DigitVideoSaver
 from .drag_crop_node import DigitDragCrop, DigitCropInfo
 from .srt_maker_node import DigitSRTMaker
 from .random_prompt_node import DigitRandomPrompt
+from .lora_loader_node import DigitLoraLoader, DigitLoraLoaderModelOnly
+from .prompt_combine_node import DigitPromptCombine
+from .batch_caption_node import DigitBatchCaption
+from .text_encode_node import DigitTextEncode
+from .dataset_prep_node import DigitDatasetPrep
+from .caption_viewer_node import DigitCaptionViewer
 
 NODE_CLASS_MAPPINGS = {
     "DigitLLMQuery": LLMQueryNode,
@@ -19,6 +25,13 @@ NODE_CLASS_MAPPINGS = {
     "DigitCropInfo": DigitCropInfo,
     "DigitSRTMaker": DigitSRTMaker,
     "DigitRandomPrompt": DigitRandomPrompt,
+    "DigitLoraLoader": DigitLoraLoader,
+    "DigitLoraLoaderModelOnly": DigitLoraLoaderModelOnly,
+    "DigitPromptCombine": DigitPromptCombine,
+    "DigitBatchCaption": DigitBatchCaption,
+    "DigitTextEncode": DigitTextEncode,
+    "DigitDatasetPrep": DigitDatasetPrep,
+    "DigitCaptionViewer": DigitCaptionViewer,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -32,6 +45,13 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "DigitCropInfo": "DIGIT Crop Info",
     "DigitSRTMaker": "DIGIT SRT Maker",
     "DigitRandomPrompt": "DIGIT Random Prompt",
+    "DigitLoraLoader": "DIGIT LoRA Loader",
+    "DigitLoraLoaderModelOnly": "DIGIT LoRA Loader (Model Only)",
+    "DigitPromptCombine": "DIGIT Prompt Combine",
+    "DigitBatchCaption": "DIGIT Batch Caption",
+    "DigitTextEncode": "DIGIT Text Encode",
+    "DigitDatasetPrep": "DIGIT Dataset Prep",
+    "DigitCaptionViewer": "DIGIT Caption Viewer",
 }
 
 WEB_DIRECTORY = "./web"

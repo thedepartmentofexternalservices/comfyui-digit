@@ -10,7 +10,7 @@ logger = logging.getLogger("DigitImageLoader")
 from PIL import Image
 from server import PromptServer
 
-from .image_saver_node import PROJEKTS_ROOTS, PROJECT_RE, FRAME_RE, scan_projects, scan_shots
+from .projekts_utils import PROJEKTS_ROOTS, PROJECT_RE, FRAME_RE, scan_projects, scan_shots
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".exr", ".tif", ".tiff", ".bmp", ".webp"}
 

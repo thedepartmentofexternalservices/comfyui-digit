@@ -1,7 +1,7 @@
 [project]
 name = "comfyui-digit"
-version = "2.1.4"
-description = "DIGIT nodes for ComfyUI — Gemini image generation, Veo video generation, LLM query, and project-based saving. All via Vertex AI directly."
+version = "2.2.0"
+description = "DIGIT nodes for ComfyUI — Gemini image/video generation, LLM query, LoRA loading with trigger words, batch captioning, dataset prep, prompt combining, and VFX pipeline saving. All via Vertex AI directly."
 license = { text = "MIT" }
 requires-python = ">=3.9"
 dependencies = [
