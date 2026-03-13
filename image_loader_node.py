@@ -14,13 +14,27 @@ from .projekts_utils import PROJEKTS_ROOTS, PROJECT_RE, FRAME_RE, scan_projects,
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".exr", ".tif", ".tiff", ".bmp", ".webp"}
 
+FILTER_PRESETS = {
+    "images": IMAGE_EXTENSIONS,
+    "loras": {".safetensors", ".pt", ".ckpt"},
+    "all": None,  # show all files
+}
+
 
 @PromptServer.instance.routes.get("/digit/browse")
 async def browse_filesystem(request):
-    """List directories and image files at a given path."""
+    """List directories and files at a given path.
+
+    Query params:
+        path: directory to list
+        filter: "images" (default), "loras", or "all"
+    """
     path = request.rel_url.query.get("path", "")
     if not path or not os.path.isdir(path):
         return web.json_response({"error": "Invalid path", "dirs": [], "files": []}, status=400)
+
+    filter_name = request.rel_url.query.get("filter", "images")
+    allowed_exts = FILTER_PRESETS.get(filter_name, IMAGE_EXTENSIONS)
 
     dirs = []
     files = []
@@ -32,9 +46,12 @@ async def browse_filesystem(request):
             if os.path.isdir(full):
                 dirs.append(entry)
             elif os.path.isfile(full):
-                ext = os.path.splitext(entry)[1].lower()
-                if ext in IMAGE_EXTENSIONS:
+                if allowed_exts is None:
                     files.append(entry)
+                else:
+                    ext = os.path.splitext(entry)[1].lower()
+                    if ext in allowed_exts:
+                        files.append(entry)
     except PermissionError:
         return web.json_response({"error": "Permission denied", "dirs": [], "files": []}, status=403)
 

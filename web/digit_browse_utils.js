@@ -5,8 +5,10 @@
  */
 import { api } from "../../scripts/api.js";
 
-async function fetchDir(path) {
-    const resp = await api.fetchApi(`/digit/browse?path=${encodeURIComponent(path)}`);
+async function fetchDir(path, filter) {
+    let url = `/digit/browse?path=${encodeURIComponent(path)}`;
+    if (filter) url += `&filter=${encodeURIComponent(filter)}`;
+    const resp = await api.fetchApi(url);
     if (resp.status !== 200) return null;
     return await resp.json();
 }
@@ -17,19 +19,20 @@ async function fetchDir(path) {
  * @param {function} onSelect - Called with the selected folder path
  */
 export function openFolderBrowserDialog(startPath, onSelect) {
-    _openBrowserDialog(startPath, onSelect, "folder");
+    _openBrowserDialog(startPath, onSelect, "folder", "images");
 }
 
 /**
  * Open a dialog to browse and select a file.
  * @param {string} startPath - Starting directory path
  * @param {function} onSelect - Called with the selected file path
+ * @param {string} [fileFilter="images"] - File filter: "images", "loras", or "all"
  */
-export function openFileBrowserDialog(startPath, onSelect) {
-    _openBrowserDialog(startPath, onSelect, "file");
+export function openFileBrowserDialog(startPath, onSelect, fileFilter) {
+    _openBrowserDialog(startPath, onSelect, "file", fileFilter || "images");
 }
 
-function _openBrowserDialog(startPath, onSelect, mode) {
+function _openBrowserDialog(startPath, onSelect, mode, fileFilter) {
     // Create overlay
     const overlay = document.createElement("div");
     Object.assign(overlay.style, {
@@ -117,8 +120,11 @@ function _openBrowserDialog(startPath, onSelect, mode) {
 
     let currentPath = startPath || "/";
 
+    // File icon based on filter type
+    const fileIcon = fileFilter === "loras" ? "\uD83E\uDDE0 " : "\uD83D\uDDBC\uFE0F ";
+
     async function navigateTo(path) {
-        const data = await fetchDir(path);
+        const data = await fetchDir(path, fileFilter);
         if (!data || data.error) return;
 
         currentPath = data.path;
@@ -136,7 +142,7 @@ function _openBrowserDialog(startPath, onSelect, mode) {
         // Files (only show in file mode)
         if (mode === "file") {
             for (const file of data.files) {
-                const row = createRow("\uD83D\uDDBC\uFE0F " + file, false);
+                const row = createRow(fileIcon + file, false);
                 row.dataset.filepath = currentPath + "/" + file;
                 row.addEventListener("click", () => highlightRow(row));
                 row.addEventListener("dblclick", () => {
@@ -149,7 +155,7 @@ function _openBrowserDialog(startPath, onSelect, mode) {
 
         if (listContainer.children.length === 0) {
             const empty = document.createElement("div");
-            empty.textContent = mode === "folder" ? "(empty directory — use Select This Folder)" : "(empty directory)";
+            empty.textContent = mode === "folder" ? "(empty directory \u2014 use Select This Folder)" : "(empty directory)";
             Object.assign(empty.style, { padding: "12px 14px", color: "#666" });
             listContainer.appendChild(empty);
         }

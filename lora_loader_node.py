@@ -212,6 +212,11 @@ class DigitLoraLoader:
                 "strength_clip": ("FLOAT", {"default": 1.0, "min": -100.0, "max": 100.0, "step": 0.01, "tooltip": "How strongly to modify the CLIP model."}),
             },
             "optional": {
+                "lora_path_override": ("STRING", {
+                    "default": "",
+                    "multiline": False,
+                    "tooltip": "Absolute path to a .safetensors file outside ComfyUI's loras folder (e.g. on LucidLink). Overrides lora_name when set.",
+                }),
                 "trigger_words_override": ("STRING", {
                     "default": "",
                     "multiline": False,
@@ -235,12 +240,18 @@ class DigitLoraLoader:
     OUTPUT_NODE = True
 
     def load_lora(self, model, clip, lora_name, strength_model, strength_clip,
-                  trigger_words_override=""):
+                  lora_path_override="", trigger_words_override=""):
         if strength_model == 0 and strength_clip == 0:
             return {"ui": {"trigger_text": ["(disabled)"], "info_text": [""]},
                     "result": (model, clip, "", "", "")}
 
-        lora_path = folder_paths.get_full_path_or_raise("loras", lora_name)
+        # Use override path if provided, otherwise resolve from ComfyUI's loras folder
+        if lora_path_override and lora_path_override.strip():
+            lora_path = lora_path_override.strip()
+            if not os.path.isfile(lora_path):
+                raise ValueError(f"LoRA file not found: {lora_path}")
+        else:
+            lora_path = folder_paths.get_full_path_or_raise("loras", lora_name)
 
         # --- Read safetensors metadata (header only, no weight loading) ---
         metadata = {}
@@ -294,6 +305,11 @@ class DigitLoraLoaderModelOnly(DigitLoraLoader):
                 "strength_model": ("FLOAT", {"default": 1.0, "min": -100.0, "max": 100.0, "step": 0.01, "tooltip": "How strongly to modify the diffusion model."}),
             },
             "optional": {
+                "lora_path_override": ("STRING", {
+                    "default": "",
+                    "multiline": False,
+                    "tooltip": "Absolute path to a .safetensors file outside ComfyUI's loras folder.",
+                }),
                 "trigger_words_override": ("STRING", {
                     "default": "",
                     "multiline": False,
@@ -313,9 +329,9 @@ class DigitLoraLoaderModelOnly(DigitLoraLoader):
     DESCRIPTION = "Load a LoRA (model only) and extract trigger words and training metadata."
 
     def load_lora_model_only(self, model, lora_name, strength_model,
-                             trigger_words_override=""):
+                             lora_path_override="", trigger_words_override=""):
         result = self.load_lora(model, None, lora_name, strength_model, 0,
-                                trigger_words_override)
+                                lora_path_override, trigger_words_override)
         ui = result["ui"]
         r = result["result"]
         # r = (model, clip, trigger_words, metadata, lora_info) — drop clip

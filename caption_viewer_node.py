@@ -3,6 +3,7 @@
 import logging
 import os
 
+import folder_paths
 import numpy as np
 import torch
 from PIL import Image
@@ -81,5 +82,13 @@ class DigitCaptionViewer:
         has_caption = "YES" if os.path.isfile(txt_path) else "NO"
         display = f"{status} | caption: {has_caption}"
 
-        return {"ui": {"viewer_text": [display]},
+        # Save preview to temp dir for on-node display
+        temp_dir = folder_paths.get_temp_directory()
+        os.makedirs(temp_dir, exist_ok=True)
+        preview_name = f"digit_viewer_{base_name}.png"
+        preview_path = os.path.join(temp_dir, preview_name)
+        img.save(preview_path, format="PNG")
+
+        return {"ui": {"images": [{"filename": preview_name, "subfolder": "", "type": "temp"}],
+                        "viewer_text": [display]},
                 "result": (img_tensor, caption, img_file, status, total)}

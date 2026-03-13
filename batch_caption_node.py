@@ -6,6 +6,7 @@ import logging
 import os
 import time
 
+import comfy.utils
 import numpy as np
 import requests
 from PIL import Image
@@ -245,6 +246,7 @@ class DigitBatchCaption:
         skipped = 0
         errors = 0
         total = len(image_files)
+        pbar = comfy.utils.ProgressBar(total)
 
         for idx, img_file in enumerate(image_files):
             base_name = os.path.splitext(img_file)[0]
@@ -293,6 +295,8 @@ class DigitBatchCaption:
                 status = f"[{idx + 1}/{total}] {img_file} -> ERROR: {e}"
                 log_lines.append(status)
                 logger.error("DIGIT Batch Caption: %s", status)
+
+            pbar.update_absolute(idx + 1)
 
             # Rate limit delay
             if delay_seconds > 0 and idx < total - 1:
