@@ -61,7 +61,7 @@ class DigitVeoVideo:
                 "negative_prompt": ("STRING", {"default": "", "multiline": True}),
                 "person_generation": (["allow_adult", "dont_allow"], {"default": "allow_adult"}),
                 "sample_count": ("INT", {"default": 1, "min": 1, "max": 4}),
-                "compression_quality": (["optimized", "lossless"], {"default": "optimized"}),
+                "compression_quality": (["lossless", "optimized"], {"default": "lossless"}),
                 "output_gcs_uri": ("STRING", {"default": "gs://digit-sandbox-video/", "tooltip": "GCS bucket URI for lossless output, e.g. gs://my-bucket/output/"}),
                 "enhance_prompt": ("BOOLEAN", {"default": True}),
             },
