@@ -23,13 +23,13 @@ class DigitDragCrop:
                 "crop_height": ("INT", {"default": 512, "min": 1, "max": 8192}),
                 "last_width": ("INT", {"default": 0}),
                 "last_height": ("INT", {"default": 0}),
+            },
+            "optional": {
+                "mask": ("MASK",),
                 "dest_width": ("INT", {"default": 0, "min": 0, "max": 8192, "tooltip": "Destination width. 0 = use crop size as-is."}),
                 "dest_height": ("INT", {"default": 0, "min": 0, "max": 8192, "tooltip": "Destination height. 0 = use crop size as-is."}),
                 "fit_mode": (FIT_MODES, {"default": "none", "tooltip": "none=no resize, crop=fill and crop, fit_h=match height, fit_v=match width"}),
                 "round_to": (["off", "8", "16", "32", "64"], {"default": "off", "tooltip": "Round output dimensions to nearest multiple. 8 works for most models, 64 for SDXL."}),
-            },
-            "optional": {
-                "mask": ("MASK",)
             },
             "hidden": {
                 "node_id": "UNIQUE_ID",
