@@ -90,5 +90,7 @@ class DigitCaptionViewer:
         img.save(preview_path, format="PNG")
 
         return {"ui": {"images": [{"filename": preview_name, "subfolder": "", "type": "temp"}],
-                        "viewer_text": [display]},
+                        "viewer_text": [display],
+                        "caption_text": [caption],
+                        "filename_text": [img_file]},
                 "result": (img_tensor, caption, img_file, status, total)}

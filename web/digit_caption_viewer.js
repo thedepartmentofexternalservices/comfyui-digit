@@ -60,6 +60,7 @@ app.registerExtension({
             }
         }
 
+        // Status line (index, resolution)
         const displayWidget = node.addWidget("text", "viewer_display", "", () => {}, {
             serialize: false,
         });
@@ -70,11 +71,44 @@ app.registerExtension({
             displayWidget.inputEl.style.fontSize = "90%";
         }
 
+        // Filename display
+        const filenameWidget = node.addWidget("text", "filename_display", "", () => {}, {
+            serialize: false,
+        });
+        if (filenameWidget.inputEl) {
+            filenameWidget.inputEl.readOnly = true;
+            filenameWidget.inputEl.style.opacity = "0.8";
+            filenameWidget.inputEl.style.fontFamily = "monospace";
+            filenameWidget.inputEl.style.fontSize = "90%";
+            filenameWidget.inputEl.style.fontWeight = "bold";
+        }
+
+        // Caption display (multiline)
+        const captionWidget = node.addWidget("text", "caption_display", "", () => {}, {
+            serialize: false,
+            multiline: true,
+        });
+        if (captionWidget.inputEl) {
+            captionWidget.inputEl.readOnly = true;
+            captionWidget.inputEl.style.opacity = "0.9";
+            captionWidget.inputEl.style.fontFamily = "monospace";
+            captionWidget.inputEl.style.fontSize = "85%";
+            captionWidget.inputEl.style.minHeight = "120px";
+            captionWidget.inputEl.style.whiteSpace = "pre-wrap";
+            captionWidget.inputEl.style.lineHeight = "1.4";
+        }
+
         const onExecuted = node.onExecuted;
         node.onExecuted = function (data) {
             if (onExecuted) onExecuted.call(this, data);
             if (data?.viewer_text?.length > 0) {
                 displayWidget.value = data.viewer_text[0];
+            }
+            if (data?.filename_text?.length > 0) {
+                filenameWidget.value = data.filename_text[0];
+            }
+            if (data?.caption_text?.length > 0) {
+                captionWidget.value = data.caption_text[0];
             }
         };
     },
