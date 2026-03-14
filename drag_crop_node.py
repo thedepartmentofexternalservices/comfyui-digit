@@ -26,6 +26,7 @@ class DigitDragCrop:
                 "dest_width": ("INT", {"default": 0, "min": 0, "max": 8192, "tooltip": "Destination width. 0 = use crop size as-is."}),
                 "dest_height": ("INT", {"default": 0, "min": 0, "max": 8192, "tooltip": "Destination height. 0 = use crop size as-is."}),
                 "fit_mode": (FIT_MODES, {"default": "none", "tooltip": "none=no resize, crop=fill and crop, fit_h=match height, fit_v=match width"}),
+                "round_to": (["off", "8", "16", "32", "64"], {"default": "off", "tooltip": "Round output dimensions to nearest multiple. 8 works for most models, 64 for SDXL."}),
             },
             "optional": {
                 "mask": ("MASK",)
@@ -55,6 +56,7 @@ class DigitDragCrop:
         dest_width: int = 0,
         dest_height: int = 0,
         fit_mode: str = "none",
+        round_to: str = "off",
         node_id=None,
         mask=None,
     ):
@@ -137,6 +139,17 @@ class DigitDragCrop:
             cropped_image, cropped_mask = self._reformat(
                 cropped_image, cropped_mask, dest_width, dest_height, fit_mode
             )
+
+        # Round dimensions to nearest multiple for AI model compatibility
+        if round_to != "off":
+            mult = int(round_to)
+            cur_h, cur_w = cropped_image.shape[1], cropped_image.shape[2]
+            rounded_w = max(mult, (cur_w // mult) * mult)
+            rounded_h = max(mult, (cur_h // mult) * mult)
+            if rounded_w != cur_w or rounded_h != cur_h:
+                cropped_image, cropped_mask = self._reformat(
+                    cropped_image, cropped_mask, rounded_w, rounded_h, "crop"
+                )
 
         original_filename = None
         if batch_size > 0:
