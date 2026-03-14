@@ -206,7 +206,7 @@ class DigitSRTMaker:
                     "placeholder": "Or paste script text directly here (overrides URL)",
                 }),
                 "gcp_project_id": ("STRING", {
-                    "default": "",
+                    "default": "digit-sandbox",
                     "tooltip": "GCP project ID. Auto-detected on GCP instances.",
                 }),
                 "gcp_region": ("STRING", {

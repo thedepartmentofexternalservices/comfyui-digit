@@ -147,12 +147,12 @@ class DigitConsoleDoctor:
                     "tooltip": "Extra context to include with the diagnosis request (e.g. 'I was trying to load a LoRA').",
                 }),
                 "gcp_project_id": ("STRING", {
-                    "default": "",
+                    "default": "digit-sandbox",
                     "tooltip": "GCP project ID. Auto-detected on GCP instances.",
                 }),
                 "gcp_region": ("STRING", {
-                    "default": "",
-                    "tooltip": "GCP region. Auto-detected on GCP instances.",
+                    "default": "global",
+                    "tooltip": "GCP region. Use 'global' for all models including 3.x previews.",
                 }),
             },
         }

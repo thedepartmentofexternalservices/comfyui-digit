@@ -161,12 +161,12 @@ class DigitBatchCaption:
                     "tooltip": "Optional system prompt override. If empty, a default captioning system prompt is used.",
                 }),
                 "gcp_project_id": ("STRING", {
-                    "default": "",
+                    "default": "digit-sandbox",
                     "tooltip": "GCP project ID. Auto-detected on GCP instances.",
                 }),
                 "gcp_region": ("STRING", {
-                    "default": "",
-                    "tooltip": "GCP region. Auto-detected on GCP instances.",
+                    "default": "global",
+                    "tooltip": "GCP region. Use 'global' for all models including 3.x previews.",
                 }),
                 "max_tokens": ("INT", {"default": 1024, "min": 64, "max": 8192}),
                 "temperature": ("FLOAT", {"default": 0.4, "min": 0.0, "max": 2.0, "step": 0.05}),

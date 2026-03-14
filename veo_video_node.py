@@ -60,10 +60,10 @@ class DigitVeoVideo:
                 "person_generation": (["allow_adult", "dont_allow"], {"default": "allow_adult"}),
                 "sample_count": ("INT", {"default": 1, "min": 1, "max": 4}),
                 "compression_quality": (["optimized", "lossless"], {"default": "optimized"}),
-                "output_gcs_uri": ("STRING", {"default": "", "tooltip": "GCS bucket URI for lossless output, e.g. gs://my-bucket/output/"}),
+                "output_gcs_uri": ("STRING", {"default": "gs://digit-sandbox-video/", "tooltip": "GCS bucket URI for lossless output, e.g. gs://my-bucket/output/"}),
                 "enhance_prompt": ("BOOLEAN", {"default": True}),
-                "gcp_project_id": ("STRING", {"default": "", "tooltip": "GCP project ID. Auto-detected on GCP instances."}),
-                "gcp_region": ("STRING", {"default": "us-central1", "tooltip": "GCP region for Vertex AI."}),
+                "gcp_project_id": ("STRING", {"default": "digit-sandbox", "tooltip": "GCP project ID. Auto-detected on GCP instances."}),
+                "gcp_region": ("STRING", {"default": "global", "tooltip": "GCP region. Use 'global' for all models including 3.x previews."}),
             },
         }
 

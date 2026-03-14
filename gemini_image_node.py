@@ -88,7 +88,7 @@ class DigitGeminiImage:
                 "hate_speech_threshold": (SAFETY_THRESHOLD_OPTIONS, {"default": "BLOCK_NONE"}),
                 "sexually_explicit_threshold": (SAFETY_THRESHOLD_OPTIONS, {"default": "BLOCK_NONE"}),
                 "dangerous_content_threshold": (SAFETY_THRESHOLD_OPTIONS, {"default": "BLOCK_NONE"}),
-                "gcp_project_id": ("STRING", {"default": "", "tooltip": "GCP project ID. Auto-detected on GCP instances."}),
+                "gcp_project_id": ("STRING", {"default": "digit-sandbox", "tooltip": "GCP project ID. Auto-detected on GCP instances."}),
                 "gcp_region": ("STRING", {"default": "global", "tooltip": "GCP region for Vertex AI. Use 'global' for default routing."}),
             },
         }
