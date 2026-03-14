@@ -36,14 +36,24 @@ class DigitCaptionViewer:
                     "tooltip": "Index of the image to view (0-based).",
                 }),
             },
+            "optional": {
+                "folder_path": ("STRING", {
+                    "forceInput": True,
+                    "tooltip": "Connect from Batch Caption's folder_path output to auto-set the dataset folder.",
+                }),
+            },
         }
 
     @classmethod
     def IS_CHANGED(cls, **kwargs):
         return float("nan")
 
-    def view(self, dataset_folder, index):
-        dataset_folder = dataset_folder.strip()
+    def view(self, dataset_folder, index, folder_path=""):
+        # Connected folder_path overrides the typed dataset_folder
+        if folder_path and folder_path.strip():
+            dataset_folder = folder_path.strip()
+        else:
+            dataset_folder = dataset_folder.strip()
         if not os.path.isdir(dataset_folder):
             raise ValueError(f"Dataset folder not found: {dataset_folder}")
 

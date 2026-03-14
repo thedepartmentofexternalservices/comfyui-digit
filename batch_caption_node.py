@@ -122,8 +122,8 @@ class DigitBatchCaption:
     ]
 
     CATEGORY = "DIGIT"
-    RETURN_TYPES = ("STRING", "INT")
-    RETURN_NAMES = ("log", "captioned_count")
+    RETURN_TYPES = ("STRING", "INT", "STRING")
+    RETURN_NAMES = ("log", "captioned_count", "folder_path")
     FUNCTION = "caption_folder"
     OUTPUT_NODE = True
     DESCRIPTION = "Batch caption images in a folder using Gemini via Vertex AI. Saves .txt files next to each image."
@@ -247,7 +247,7 @@ class DigitBatchCaption:
 
         if not image_files:
             return {"ui": {"log_text": ["No images found in folder."]},
-                    "result": ("No images found.", 0)}
+                    "result": ("No images found.", 0, image_folder)}
 
         # Get token
         token = get_gcp_access_token()
@@ -330,4 +330,4 @@ class DigitBatchCaption:
         logger.info("DIGIT Batch Caption: %s", summary)
 
         return {"ui": {"log_text": [summary]},
-                "result": (log_text, captioned)}
+                "result": (log_text, captioned, image_folder)}
