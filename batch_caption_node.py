@@ -158,6 +158,16 @@ class DigitBatchCaption:
                     "forceInput": True,
                     "tooltip": "Trigger word prepended to each caption. Connect from LoRA Loader or type manually. Leave disconnected to skip.",
                 }),
+                "prefix_text": ("STRING", {
+                    "default": "",
+                    "multiline": True,
+                    "tooltip": "Text injected at the START of every caption (after trigger word). Useful for consistent style tags.",
+                }),
+                "suffix_text": ("STRING", {
+                    "default": "",
+                    "multiline": True,
+                    "tooltip": "Text injected at the END of every caption. Useful for quality tags or consistent endings.",
+                }),
                 "custom_prompt": ("STRING", {
                     "default": "",
                     "multiline": True,
@@ -186,7 +196,8 @@ class DigitBatchCaption:
         return float("nan")
 
     def caption_folder(self, image_folder, model, caption_style, caption_length,
-                       trigger_word="", overwrite=False, custom_prompt="",
+                       trigger_word="", prefix_text="", suffix_text="",
+                       overwrite=False, custom_prompt="",
                        system_prompt="", gcp_project_id="", gcp_region="",
                        max_tokens=1024, temperature=0.4, max_dimension=2048,
                        delay_seconds=0.5):
@@ -278,9 +289,16 @@ class DigitBatchCaption:
                         lines = lines[1:]
                     caption = "\n".join(lines).strip()
 
-                # Prepend trigger word
+                # Assemble: trigger word + prefix + caption + suffix
+                parts = []
                 if trigger_word.strip():
-                    caption = f"{trigger_word.strip()}\n\n{caption}"
+                    parts.append(trigger_word.strip())
+                if prefix_text.strip():
+                    parts.append(prefix_text.strip())
+                parts.append(caption)
+                if suffix_text.strip():
+                    parts.append(suffix_text.strip())
+                caption = "\n\n".join(parts)
 
                 # Save caption
                 with open(txt_path, "w", encoding="utf-8") as f:

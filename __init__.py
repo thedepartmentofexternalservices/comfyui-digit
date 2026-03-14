@@ -14,6 +14,7 @@ from .text_encode_node import DigitTextEncode
 from .dataset_prep_node import DigitDatasetPrep
 from .caption_viewer_node import DigitCaptionViewer
 from .console_doctor_node import DigitConsoleDoctor
+from .caption_find_replace_node import DigitCaptionFindReplace
 
 NODE_CLASS_MAPPINGS = {
     "DigitLLMQuery": LLMQueryNode,
@@ -34,6 +35,7 @@ NODE_CLASS_MAPPINGS = {
     "DigitDatasetPrep": DigitDatasetPrep,
     "DigitCaptionViewer": DigitCaptionViewer,
     "DigitConsoleDoctor": DigitConsoleDoctor,
+    "DigitCaptionFindReplace": DigitCaptionFindReplace,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -55,6 +57,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "DigitDatasetPrep": "DIGIT Dataset Prep",
     "DigitCaptionViewer": "DIGIT Caption Viewer",
     "DigitConsoleDoctor": "DIGIT Console Doctor",
+    "DigitCaptionFindReplace": "DIGIT Caption Find & Replace",
 }
 
 WEB_DIRECTORY = "./web"
