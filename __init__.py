@@ -13,6 +13,7 @@ from .batch_caption_node import DigitBatchCaption
 from .text_encode_node import DigitTextEncode
 from .dataset_prep_node import DigitDatasetPrep
 from .caption_viewer_node import DigitCaptionViewer
+from .console_doctor_node import DigitConsoleDoctor
 
 NODE_CLASS_MAPPINGS = {
     "DigitLLMQuery": LLMQueryNode,
@@ -32,6 +33,7 @@ NODE_CLASS_MAPPINGS = {
     "DigitTextEncode": DigitTextEncode,
     "DigitDatasetPrep": DigitDatasetPrep,
     "DigitCaptionViewer": DigitCaptionViewer,
+    "DigitConsoleDoctor": DigitConsoleDoctor,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -52,6 +54,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "DigitTextEncode": "DIGIT Text Encode",
     "DigitDatasetPrep": "DIGIT Dataset Prep",
     "DigitCaptionViewer": "DIGIT Caption Viewer",
+    "DigitConsoleDoctor": "DIGIT Console Doctor",
 }
 
 WEB_DIRECTORY = "./web"
