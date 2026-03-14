@@ -60,55 +60,42 @@ app.registerExtension({
             }
         }
 
-        // Status line (index, resolution)
-        const displayWidget = node.addWidget("text", "viewer_display", "", () => {}, {
-            serialize: false,
-        });
-        if (displayWidget.inputEl) {
-            displayWidget.inputEl.readOnly = true;
-            displayWidget.inputEl.style.opacity = "0.8";
-            displayWidget.inputEl.style.fontFamily = "monospace";
-            displayWidget.inputEl.style.fontSize = "90%";
-        }
+        // Create a DOM container for status, filename, and caption
+        const container = document.createElement("div");
+        container.style.cssText = "display:flex;flex-direction:column;gap:4px;width:100%;padding:4px;box-sizing:border-box;";
 
-        // Filename display
-        const filenameWidget = node.addWidget("text", "filename_display", "", () => {}, {
-            serialize: false,
-        });
-        if (filenameWidget.inputEl) {
-            filenameWidget.inputEl.readOnly = true;
-            filenameWidget.inputEl.style.opacity = "0.8";
-            filenameWidget.inputEl.style.fontFamily = "monospace";
-            filenameWidget.inputEl.style.fontSize = "90%";
-            filenameWidget.inputEl.style.fontWeight = "bold";
-        }
+        const statusEl = document.createElement("div");
+        statusEl.style.cssText = "font-family:monospace;font-size:11px;opacity:0.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+        statusEl.textContent = "—";
+        container.appendChild(statusEl);
 
-        // Caption display (multiline)
-        const captionWidget = node.addWidget("text", "caption_display", "", () => {}, {
+        const filenameEl = document.createElement("div");
+        filenameEl.style.cssText = "font-family:monospace;font-size:12px;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+        filenameEl.textContent = "";
+        container.appendChild(filenameEl);
+
+        const captionEl = document.createElement("textarea");
+        captionEl.readOnly = true;
+        captionEl.style.cssText = "font-family:monospace;font-size:11px;line-height:1.4;width:100%;min-height:140px;max-height:300px;resize:vertical;background:rgba(0,0,0,0.3);color:#ddd;border:1px solid rgba(255,255,255,0.15);border-radius:4px;padding:6px;box-sizing:border-box;white-space:pre-wrap;";
+        captionEl.placeholder = "Caption will appear here after execution...";
+        container.appendChild(captionEl);
+
+        const captionWidget = node.addDOMWidget("caption_area", "customtext", container, {
             serialize: false,
-            multiline: true,
+            getMinHeight() { return 200; },
         });
-        if (captionWidget.inputEl) {
-            captionWidget.inputEl.readOnly = true;
-            captionWidget.inputEl.style.opacity = "0.9";
-            captionWidget.inputEl.style.fontFamily = "monospace";
-            captionWidget.inputEl.style.fontSize = "85%";
-            captionWidget.inputEl.style.minHeight = "120px";
-            captionWidget.inputEl.style.whiteSpace = "pre-wrap";
-            captionWidget.inputEl.style.lineHeight = "1.4";
-        }
 
         const onExecuted = node.onExecuted;
         node.onExecuted = function (data) {
             if (onExecuted) onExecuted.call(this, data);
             if (data?.viewer_text?.length > 0) {
-                displayWidget.value = data.viewer_text[0];
+                statusEl.textContent = data.viewer_text[0];
             }
             if (data?.filename_text?.length > 0) {
-                filenameWidget.value = data.filename_text[0];
+                filenameEl.textContent = data.filename_text[0];
             }
             if (data?.caption_text?.length > 0) {
-                captionWidget.value = data.caption_text[0];
+                captionEl.value = data.caption_text[0];
             }
         };
     },
