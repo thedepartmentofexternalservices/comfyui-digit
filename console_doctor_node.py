@@ -132,6 +132,9 @@ class DigitConsoleDoctor:
                 }),
             },
             "optional": {
+                "run_after": ("*", {
+                    "tooltip": "Connect any output from the last node in your workflow to ensure Console Doctor runs last.",
+                }),
                 "node_filter": ("STRING", {
                     "default": "",
                     "tooltip": "Only show logs containing this text (e.g. a node name). Leave empty for all.",
@@ -157,7 +160,7 @@ class DigitConsoleDoctor:
         return float("nan")
 
     def diagnose(self, trigger, model, log_level, max_log_entries,
-                 node_filter="", extra_context="",
+                 run_after=None, node_filter="", extra_context="",
                  gcp_project_id="", gcp_region=""):
         # Get logs from ComfyUI's buffer
         all_logs = _get_comfyui_logs()
