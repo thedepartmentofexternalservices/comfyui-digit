@@ -198,7 +198,7 @@ class DigitConsoleDoctor:
         # Call Gemini
         token = get_gcp_access_token()
         body = {
-            "contents": [{"parts": [{"text": user_prompt}]}],
+            "contents": [{"role": "user", "parts": [{"text": user_prompt}]}],
             "generationConfig": {"maxOutputTokens": 2048, "temperature": 0.3},
             "systemInstruction": {"parts": [{"text": DOCTOR_SYSTEM_PROMPT}]},
         }

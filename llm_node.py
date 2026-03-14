@@ -98,7 +98,7 @@ class LLMQueryNode:
         parts.append({"text": prompt})
 
         body = {
-            "contents": [{"parts": parts}],
+            "contents": [{"role": "user", "parts": parts}],
             "generationConfig": {"maxOutputTokens": max_tokens, "temperature": temperature},
         }
         if system_prompt:

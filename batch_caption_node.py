@@ -79,7 +79,7 @@ def _call_gemini(project, region, model, token, image_b64, system_prompt, prompt
         {"text": prompt},
     ]
     body = {
-        "contents": [{"parts": parts}],
+        "contents": [{"role": "user", "parts": parts}],
         "generationConfig": {"maxOutputTokens": max_tokens, "temperature": temperature},
     }
     if system_prompt:
