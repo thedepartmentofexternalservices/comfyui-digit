@@ -11,7 +11,7 @@ import numpy as np
 import requests
 from PIL import Image
 
-from .llm_node import get_gcp_metadata, get_gcp_access_token
+from .llm_node import get_gcp_metadata, get_gcp_access_token, build_vertex_url
 
 logger = logging.getLogger(__name__)
 
@@ -85,8 +85,7 @@ def _call_gemini(project, region, model, token, image_b64, system_prompt, prompt
     if system_prompt:
         body["systemInstruction"] = {"parts": [{"text": system_prompt}]}
 
-    url = (f"https://{region}-aiplatform.googleapis.com/v1/projects/{project}"
-           f"/locations/{region}/publishers/google/models/{model}:generateContent")
+    url = build_vertex_url(project, region, model)
 
     for attempt in range(3):
         resp = requests.post(

@@ -30,6 +30,15 @@ def get_gcp_access_token():
     return credentials.token
 
 
+def build_vertex_url(project, region, model, method="generateContent"):
+    """Build the Vertex AI endpoint URL, handling the 'global' region correctly."""
+    if region == "global":
+        host = "aiplatform.googleapis.com"
+    else:
+        host = f"{region}-aiplatform.googleapis.com"
+    return f"https://{host}/v1/projects/{project}/locations/{region}/publishers/google/models/{model}:{method}"
+
+
 class LLMQueryNode:
     MODELS = [
         "gemini-2.5-pro",
@@ -107,7 +116,7 @@ class LLMQueryNode:
         if system_prompt:
             body["systemInstruction"] = {"parts": [{"text": system_prompt}]}
 
-        url = f"https://{region}-aiplatform.googleapis.com/v1/projects/{project}/locations/{region}/publishers/google/models/{model}:generateContent"
+        url = build_vertex_url(project, region, model)
 
         resp = requests.post(
             url,
