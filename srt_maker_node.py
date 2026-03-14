@@ -151,13 +151,15 @@ SARAH: I'm great, thanks for asking.
 
 class DigitSRTMaker:
     MODELS = [
+        "gemini-2.5-pro",
+        "gemini-2.5-flash",
+        "gemini-2.5-flash-lite",
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-lite",
         "gemini-3.1-pro-preview",
         "gemini-3.1-flash-lite-preview",
         "gemini-3-pro-preview",
         "gemini-3-flash-preview",
-        "gemini-2.5-pro",
-        "gemini-2.5-flash",
-        "gemini-2.5-flash-lite",
     ]
 
     CATEGORY = "DIGIT"
@@ -177,7 +179,7 @@ class DigitSRTMaker:
 
         return {
             "required": {
-                "model": (cls.MODELS, {"default": "gemini-3.1-pro-preview"}),
+                "model": (cls.MODELS, {"default": "gemini-2.5-flash"}),
                 "script_url": ("STRING", {
                     "default": "",
                     "multiline": False,
