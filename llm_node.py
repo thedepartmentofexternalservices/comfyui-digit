@@ -65,7 +65,7 @@ class LLMQueryNode:
             "optional": {
                 "system_prompt": ("STRING", {"default": "", "multiline": True}),
                 "image": ("IMAGE",),
-                "max_tokens": ("INT", {"default": 1024, "min": 1, "max": 8192}),
+                "max_tokens": ("INT", {"default": 8192, "min": 1, "max": 65536}),
                 "temperature": ("FLOAT", {"default": 0.7, "min": 0.0, "max": 2.0, "step": 0.05}),
             },
         }
