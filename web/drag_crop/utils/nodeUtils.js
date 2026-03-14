@@ -56,10 +56,6 @@ export function removeNodeInputs(node) {
       "crop_height",
       "last_width",
       "last_height",
-      "dest_width",
-      "dest_height",
-      "fit_mode",
-      "round_to",
     ].includes(input.name)
   );
 }
