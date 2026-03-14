@@ -49,6 +49,8 @@ class DigitVeoVideo:
                 "duration_seconds": ("INT", {"default": 8, "min": 4, "max": 8, "step": 2}),
                 "generate_audio": ("BOOLEAN", {"default": True}),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 2147483647}),
+                "gcp_project_id": ("STRING", {"default": "digit-sandbox", "tooltip": "GCP project ID. Auto-detected on GCP instances."}),
+                "gcp_region": ("STRING", {"default": "global", "tooltip": "GCP region. Use 'global' for all models including 3.x previews."}),
             },
             "optional": {
                 "first_frame": ("IMAGE",),
@@ -62,8 +64,6 @@ class DigitVeoVideo:
                 "compression_quality": (["optimized", "lossless"], {"default": "optimized"}),
                 "output_gcs_uri": ("STRING", {"default": "gs://digit-sandbox-video/", "tooltip": "GCS bucket URI for lossless output, e.g. gs://my-bucket/output/"}),
                 "enhance_prompt": ("BOOLEAN", {"default": True}),
-                "gcp_project_id": ("STRING", {"default": "digit-sandbox", "tooltip": "GCP project ID. Auto-detected on GCP instances."}),
-                "gcp_region": ("STRING", {"default": "global", "tooltip": "GCP region. Use 'global' for all models including 3.x previews."}),
             },
         }
 

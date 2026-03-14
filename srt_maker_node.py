@@ -198,13 +198,6 @@ class DigitSRTMaker:
                 "projekts_root": (available_roots,),
                 "project": (projects,),
                 "filename": ("STRING", {"default": "dialogue"}),
-            },
-            "optional": {
-                "script_text": ("STRING", {
-                    "default": "",
-                    "multiline": True,
-                    "placeholder": "Or paste script text directly here (overrides URL)",
-                }),
                 "gcp_project_id": ("STRING", {
                     "default": "digit-sandbox",
                     "tooltip": "GCP project ID. Auto-detected on GCP instances.",
@@ -212,6 +205,13 @@ class DigitSRTMaker:
                 "gcp_region": ("STRING", {
                     "default": "global",
                     "tooltip": "GCP region for Vertex AI.",
+                }),
+            },
+            "optional": {
+                "script_text": ("STRING", {
+                    "default": "",
+                    "multiline": True,
+                    "placeholder": "Or paste script text directly here (overrides URL)",
                 }),
             },
         }

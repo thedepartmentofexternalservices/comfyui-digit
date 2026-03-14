@@ -143,6 +143,14 @@ class DigitBatchCaption:
                     "default": False,
                     "tooltip": "Overwrite existing .txt caption files. If false, skips images that already have captions.",
                 }),
+                "gcp_project_id": ("STRING", {
+                    "default": "digit-sandbox",
+                    "tooltip": "GCP project ID. Auto-detected on GCP instances.",
+                }),
+                "gcp_region": ("STRING", {
+                    "default": "global",
+                    "tooltip": "GCP region. Use 'global' for all models including 3.x previews.",
+                }),
             },
             "optional": {
                 "trigger_word": ("STRING", {
@@ -159,14 +167,6 @@ class DigitBatchCaption:
                     "default": "",
                     "multiline": True,
                     "tooltip": "Optional system prompt override. If empty, a default captioning system prompt is used.",
-                }),
-                "gcp_project_id": ("STRING", {
-                    "default": "digit-sandbox",
-                    "tooltip": "GCP project ID. Auto-detected on GCP instances.",
-                }),
-                "gcp_region": ("STRING", {
-                    "default": "global",
-                    "tooltip": "GCP region. Use 'global' for all models including 3.x previews.",
                 }),
                 "max_tokens": ("INT", {"default": 1024, "min": 64, "max": 8192}),
                 "temperature": ("FLOAT", {"default": 0.4, "min": 0.0, "max": 2.0, "step": 0.05}),

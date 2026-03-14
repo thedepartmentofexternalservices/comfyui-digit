@@ -132,6 +132,14 @@ class DigitConsoleDoctor:
                     "default": 50, "min": 5, "max": 300,
                     "tooltip": "Maximum number of log entries to send to Gemini.",
                 }),
+                "gcp_project_id": ("STRING", {
+                    "default": "digit-sandbox",
+                    "tooltip": "GCP project ID. Auto-detected on GCP instances.",
+                }),
+                "gcp_region": ("STRING", {
+                    "default": "global",
+                    "tooltip": "GCP region. Use 'global' for all models including 3.x previews.",
+                }),
             },
             "optional": {
                 "run_after": ("*", {
@@ -145,14 +153,6 @@ class DigitConsoleDoctor:
                     "default": "",
                     "multiline": True,
                     "tooltip": "Extra context to include with the diagnosis request (e.g. 'I was trying to load a LoRA').",
-                }),
-                "gcp_project_id": ("STRING", {
-                    "default": "digit-sandbox",
-                    "tooltip": "GCP project ID. Auto-detected on GCP instances.",
-                }),
-                "gcp_region": ("STRING", {
-                    "default": "global",
-                    "tooltip": "GCP region. Use 'global' for all models including 3.x previews.",
                 }),
             },
         }

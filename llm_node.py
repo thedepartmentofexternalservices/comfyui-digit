@@ -59,10 +59,10 @@ class LLMQueryNode:
             "required": {
                 "model": (cls.MODELS, {"default": cls.MODELS[0]}),
                 "prompt": ("STRING", {"default": "", "multiline": True}),
-            },
-            "optional": {
                 "gcp_project_id": ("STRING", {"default": "digit-sandbox", "tooltip": "GCP project ID. Auto-detected on GCP instances."}),
                 "gcp_region": ("STRING", {"default": "global", "tooltip": "GCP region. Use 'global' for all models including 3.x previews."}),
+            },
+            "optional": {
                 "system_prompt": ("STRING", {"default": "", "multiline": True}),
                 "image": ("IMAGE",),
                 "max_tokens": ("INT", {"default": 1024, "min": 1, "max": 8192}),

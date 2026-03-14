@@ -76,6 +76,8 @@ class DigitGeminiImage:
                 "resolution": (cls.RESOLUTIONS, {"default": "1K"}),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 2147483647}),
                 "temperature": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.01}),
+                "gcp_project_id": ("STRING", {"default": "digit-sandbox", "tooltip": "GCP project ID. Auto-detected on GCP instances."}),
+                "gcp_region": ("STRING", {"default": "global", "tooltip": "GCP region for Vertex AI. Use 'global' for default routing."}),
             },
             "optional": {
                 "image1": ("IMAGE",),
@@ -88,8 +90,6 @@ class DigitGeminiImage:
                 "hate_speech_threshold": (SAFETY_THRESHOLD_OPTIONS, {"default": "BLOCK_NONE"}),
                 "sexually_explicit_threshold": (SAFETY_THRESHOLD_OPTIONS, {"default": "BLOCK_NONE"}),
                 "dangerous_content_threshold": (SAFETY_THRESHOLD_OPTIONS, {"default": "BLOCK_NONE"}),
-                "gcp_project_id": ("STRING", {"default": "digit-sandbox", "tooltip": "GCP project ID. Auto-detected on GCP instances."}),
-                "gcp_region": ("STRING", {"default": "global", "tooltip": "GCP region for Vertex AI. Use 'global' for default routing."}),
             },
         }
 
