@@ -8,7 +8,7 @@ import numpy as np
 from PIL import Image as PILImage
 
 import folder_paths
-from .llm_node import get_gcp_metadata
+from .gcp_config import resolve_gcp_config, resolve_gcs_uri
 
 logger = logging.getLogger(__name__)
 
@@ -49,8 +49,8 @@ class DigitVeoVideo:
                 "duration_seconds": ("INT", {"default": 8, "min": 4, "max": 8, "step": 2}),
                 "generate_audio": ("BOOLEAN", {"default": True}),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 2147483647}),
-                "gcp_project_id": ("STRING", {"default": "digit-sandbox", "tooltip": "GCP project ID. Auto-detected on GCP instances."}),
-                "gcp_region": ("STRING", {"default": "global", "tooltip": "GCP region. Use 'global' for all models including 3.x previews."}),
+                "gcp_project_id": ("STRING", {"default": "", "tooltip": "GCP project ID. Auto-detected from DIGIT_GCP_PROJECT env var or GCP metadata."}),
+                "gcp_region": ("STRING", {"default": "", "tooltip": "GCP region. Auto-detected from DIGIT_GCP_REGION env var or GCP metadata. Defaults to 'us-central1' for Veo."}),
             },
             "optional": {
                 "first_frame": ("IMAGE",),
@@ -62,7 +62,7 @@ class DigitVeoVideo:
                 "person_generation": (["allow_adult", "dont_allow"], {"default": "allow_adult"}),
                 "sample_count": ("INT", {"default": 1, "min": 1, "max": 4}),
                 "compression_quality": (["lossless", "optimized"], {"default": "lossless"}),
-                "output_gcs_uri": ("STRING", {"default": "gs://digit-sandbox-video/", "tooltip": "GCS bucket URI for lossless output, e.g. gs://my-bucket/output/"}),
+                "output_gcs_uri": ("STRING", {"default": "", "tooltip": "GCS bucket URI for lossless output. Auto-detected from DIGIT_GCS_URI env var, e.g. gs://my-bucket/output/"}),
                 "enhance_prompt": ("BOOLEAN", {"default": True}),
             },
         }
@@ -78,25 +78,6 @@ class DigitVeoVideo:
         if seed == 0:
             return float("nan")
         return seed
-
-    def _resolve_gcp_config(self, gcp_project_id, gcp_region):
-        project = gcp_project_id.strip() if gcp_project_id else ""
-        region = gcp_region.strip() if gcp_region else ""
-
-        if not project:
-            project = get_gcp_metadata("project/project-id")
-        if not region:
-            zone = get_gcp_metadata("instance/zone")
-            if zone:
-                zone_name = zone.split("/")[-1]
-                region = "-".join(zone_name.split("-")[:-1])
-
-        if not project:
-            raise ValueError("GCP project ID is required. Set it in the node or run on a GCP instance.")
-        if not region:
-            region = "us-central1"
-
-        return project, region
 
     def generate(
         self,
@@ -128,7 +109,7 @@ class DigitVeoVideo:
         if not prompt:
             raise ValueError("Prompt is required")
 
-        project, region = self._resolve_gcp_config(gcp_project_id, gcp_region)
+        project, region = resolve_gcp_config(gcp_project_id, gcp_region, region_fallback="us-central1")
 
         client = genai.Client(
             vertexai=True,
@@ -159,7 +140,7 @@ class DigitVeoVideo:
             config_kwargs["negative_prompt"] = negative_prompt.strip()
 
         # Compression / GCS output
-        gcs_uri = output_gcs_uri.strip() if output_gcs_uri else ""
+        gcs_uri = resolve_gcs_uri(output_gcs_uri)
         if compression_quality == "lossless":
             if not gcs_uri:
                 logger.warning("Lossless compression requires output_gcs_uri. Falling back to optimized.")

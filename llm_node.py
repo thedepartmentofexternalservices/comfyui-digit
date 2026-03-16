@@ -5,38 +5,11 @@ import numpy as np
 import requests
 from PIL import Image
 
-
-def get_gcp_metadata(path):
-    """Fetch metadata from GCP metadata service (works on Compute Engine/GKE)."""
-    try:
-        response = requests.get(
-            f"http://metadata.google.internal/computeMetadata/v1/{path}",
-            headers={"Metadata-Flavor": "Google"},
-            timeout=5,
-        )
-        response.raise_for_status()
-        return response.text.strip()
-    except requests.exceptions.RequestException:
-        return None
-
-
-def get_gcp_access_token():
-    """Get an access token from Application Default Credentials."""
-    import google.auth
-    import google.auth.transport.requests
-
-    credentials, _ = google.auth.default()
-    credentials.refresh(google.auth.transport.requests.Request())
-    return credentials.token
-
-
-def build_vertex_url(project, region, model, method="generateContent"):
-    """Build the Vertex AI endpoint URL, handling the 'global' region correctly."""
-    if region == "global":
-        host = "aiplatform.googleapis.com"
-    else:
-        host = f"{region}-aiplatform.googleapis.com"
-    return f"https://{host}/v1/projects/{project}/locations/{region}/publishers/google/models/{model}:{method}"
+from .gcp_config import (
+    get_gcp_access_token,
+    build_vertex_url,
+    resolve_gcp_config,
+)
 
 
 class LLMQueryNode:
@@ -59,8 +32,8 @@ class LLMQueryNode:
             "required": {
                 "model": (cls.MODELS, {"default": cls.MODELS[0]}),
                 "prompt": ("STRING", {"default": "", "multiline": True}),
-                "gcp_project_id": ("STRING", {"default": "digit-sandbox", "tooltip": "GCP project ID. Auto-detected on GCP instances."}),
-                "gcp_region": ("STRING", {"default": "global", "tooltip": "GCP region. Use 'global' for all models including 3.x previews."}),
+                "gcp_project_id": ("STRING", {"default": "", "tooltip": "GCP project ID. Auto-detected from DIGIT_GCP_PROJECT env var or GCP metadata."}),
+                "gcp_region": ("STRING", {"default": "", "tooltip": "GCP region. Auto-detected from DIGIT_GCP_REGION env var or GCP metadata. Defaults to 'global'."}),
             },
             "optional": {
                 "system_prompt": ("STRING", {"default": "", "multiline": True}),
@@ -75,31 +48,12 @@ class LLMQueryNode:
     FUNCTION = "query"
     CATEGORY = "DIGIT"
 
-    def _resolve_gcp_config(self, gcp_project_id, gcp_region):
-        project = gcp_project_id.strip() if gcp_project_id else ""
-        region = gcp_region.strip() if gcp_region else ""
-
-        if not project:
-            project = get_gcp_metadata("project/project-id")
-        if not region:
-            zone = get_gcp_metadata("instance/zone")
-            if zone:
-                zone_name = zone.split("/")[-1]
-                region = "-".join(zone_name.split("-")[:-1])
-
-        if not project:
-            raise ValueError("GCP project ID is required. Set it in the node or run on a GCP instance.")
-        if not region:
-            raise ValueError("GCP region is required. Set it in the node or run on a GCP instance.")
-
-        return project, region
-
     def query(self, model, prompt, gcp_project_id="", gcp_region="",
               system_prompt="", image=None, max_tokens=1024, temperature=0.7):
         if not prompt:
             raise ValueError("Prompt is required")
 
-        project, region = self._resolve_gcp_config(gcp_project_id, gcp_region)
+        project, region = resolve_gcp_config(gcp_project_id, gcp_region)
         image_b64 = self._encode_image(image) if image is not None else None
 
         token = get_gcp_access_token()

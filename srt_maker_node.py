@@ -8,7 +8,7 @@ from html.parser import HTMLParser
 from server import PromptServer
 from aiohttp import web
 
-from .llm_node import get_gcp_metadata
+from .gcp_config import resolve_gcp_config
 from .projekts_utils import PROJEKTS_ROOTS, scan_projects
 
 logger = logging.getLogger(__name__)
@@ -199,12 +199,12 @@ class DigitSRTMaker:
                 "project": (projects,),
                 "filename": ("STRING", {"default": "dialogue"}),
                 "gcp_project_id": ("STRING", {
-                    "default": "digit-sandbox",
-                    "tooltip": "GCP project ID. Auto-detected on GCP instances.",
+                    "default": "",
+                    "tooltip": "GCP project ID. Auto-detected from DIGIT_GCP_PROJECT env var or GCP metadata.",
                 }),
                 "gcp_region": ("STRING", {
-                    "default": "global",
-                    "tooltip": "GCP region for Vertex AI.",
+                    "default": "",
+                    "tooltip": "GCP region. Auto-detected from DIGIT_GCP_REGION env var or GCP metadata. Defaults to 'global'.",
                 }),
             },
             "optional": {
@@ -223,25 +223,6 @@ class DigitSRTMaker:
     @classmethod
     def IS_CHANGED(cls, **kwargs):
         return float("nan")
-
-    def _resolve_gcp_config(self, gcp_project_id, gcp_region):
-        project = gcp_project_id.strip() if gcp_project_id else ""
-        region = gcp_region.strip() if gcp_region else ""
-
-        if not project:
-            project = get_gcp_metadata("project/project-id")
-        if not region:
-            zone = get_gcp_metadata("instance/zone")
-            if zone:
-                zone_name = zone.split("/")[-1]
-                region = "-".join(zone_name.split("-")[:-1])
-
-        if not project:
-            raise ValueError("GCP project ID is required. Set it in the node or run on a GCP instance.")
-        if not region:
-            region = "global"
-
-        return project, region
 
     def make_srt(self, model, script_url, extra_instructions, words_per_second,
                  projekts_root, project, filename,
@@ -265,7 +246,7 @@ class DigitSRTMaker:
             raise ValueError("[DigitSRTMaker] No text content found.")
 
         # Setup Gemini client
-        gcp_project, gcp_reg = self._resolve_gcp_config(gcp_project_id, gcp_region)
+        gcp_project, gcp_reg = resolve_gcp_config(gcp_project_id, gcp_region)
 
         client = genai.Client(
             vertexai=True,

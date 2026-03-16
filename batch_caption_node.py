@@ -11,7 +11,7 @@ import numpy as np
 import requests
 from PIL import Image
 
-from .llm_node import get_gcp_metadata, get_gcp_access_token, build_vertex_url
+from .gcp_config import get_gcp_access_token, build_vertex_url, resolve_gcp_config
 
 logger = logging.getLogger(__name__)
 
@@ -144,12 +144,12 @@ class DigitBatchCaption:
                     "tooltip": "Overwrite existing .txt caption files. If false, skips images that already have captions.",
                 }),
                 "gcp_project_id": ("STRING", {
-                    "default": "digit-sandbox",
-                    "tooltip": "GCP project ID. Auto-detected on GCP instances.",
+                    "default": "",
+                    "tooltip": "GCP project ID. Auto-detected from DIGIT_GCP_PROJECT env var or GCP metadata.",
                 }),
                 "gcp_region": ("STRING", {
-                    "default": "global",
-                    "tooltip": "GCP region. Use 'global' for all models including 3.x previews.",
+                    "default": "",
+                    "tooltip": "GCP region. Auto-detected from DIGIT_GCP_REGION env var or GCP metadata. Defaults to 'global'.",
                 }),
             },
             "optional": {
@@ -207,16 +207,7 @@ class DigitBatchCaption:
             raise ValueError(f"Image folder not found: {image_folder}")
 
         # Resolve GCP config
-        project = gcp_project_id.strip() or get_gcp_metadata("project/project-id")
-        region = gcp_region.strip()
-        if not region:
-            zone = get_gcp_metadata("instance/zone")
-            if zone:
-                region = "-".join(zone.split("/")[-1].split("-")[:-1])
-        if not project:
-            raise ValueError("GCP project ID required. Set in node or run on GCP instance.")
-        if not region:
-            raise ValueError("GCP region required. Set in node or run on GCP instance.")
+        project, region = resolve_gcp_config(gcp_project_id, gcp_region)
 
         # Build prompt
         style_prompt = CAPTION_STYLES.get(caption_style, "")

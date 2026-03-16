@@ -5,7 +5,7 @@ import re
 
 import requests
 
-from .llm_node import get_gcp_metadata, get_gcp_access_token, build_vertex_url
+from .gcp_config import get_gcp_access_token, build_vertex_url, resolve_gcp_config
 
 logger = logging.getLogger(__name__)
 
@@ -133,12 +133,12 @@ class DigitConsoleDoctor:
                     "tooltip": "Maximum number of log entries to send to Gemini.",
                 }),
                 "gcp_project_id": ("STRING", {
-                    "default": "digit-sandbox",
-                    "tooltip": "GCP project ID. Auto-detected on GCP instances.",
+                    "default": "",
+                    "tooltip": "GCP project ID. Auto-detected from DIGIT_GCP_PROJECT env var or GCP metadata.",
                 }),
                 "gcp_region": ("STRING", {
-                    "default": "global",
-                    "tooltip": "GCP region. Use 'global' for all models including 3.x previews.",
+                    "default": "",
+                    "tooltip": "GCP region. Auto-detected from DIGIT_GCP_REGION env var or GCP metadata. Defaults to 'global'.",
                 }),
             },
             "optional": {
@@ -184,16 +184,7 @@ class DigitConsoleDoctor:
                     "result": (msg, _format_logs(list(all_logs)[-20:]))}
 
         # Resolve GCP
-        project = (gcp_project_id.strip() if gcp_project_id else "") or get_gcp_metadata("project/project-id")
-        region = gcp_region.strip() if gcp_region else ""
-        if not region:
-            zone = get_gcp_metadata("instance/zone")
-            if zone:
-                region = "-".join(zone.split("/")[-1].split("-")[:-1])
-        if not project:
-            raise ValueError("GCP project ID required. Set in node or run on GCP instance.")
-        if not region:
-            raise ValueError("GCP region required. Set in node or run on GCP instance.")
+        project, region = resolve_gcp_config(gcp_project_id, gcp_region)
 
         # Build prompt
         user_prompt = f"Here are the recent ComfyUI console logs:\n\n```\n{raw_text}\n```"

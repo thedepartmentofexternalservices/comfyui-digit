@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Optional
 
 from .dataset import IMAGE_EXTENSIONS
+from ..gcp_config import resolve_gcp_config
 
 try:
     from google import genai
@@ -50,51 +51,15 @@ class GeminiCaptioner:
         self._min_interval = 60.0 / requests_per_minute
         self._last_request_time = 0
 
-        # Initialize client
+        # Initialize client — use shared GCP config resolution
+        project, region = resolve_gcp_config(
+            gcp_project_id or "", gcp_region or "", region_fallback="us-central1"
+        )
         self.client = genai.Client(
             vertexai=True,
-            project=gcp_project_id or self._get_gcp_project(),
-            location=gcp_region or self._get_gcp_region(),
+            project=project,
+            location=region,
         )
-
-    def _get_gcp_project(self) -> str:
-        """Get GCP project from metadata or environment."""
-        project = os.environ.get("GOOGLE_CLOUD_PROJECT") or os.environ.get("GCP_PROJECT_ID")
-        if project:
-            return project
-        try:
-            import requests
-            resp = requests.get(
-                "http://metadata.google.internal/computeMetadata/v1/project/project-id",
-                headers={"Metadata-Flavor": "Google"},
-                timeout=2,
-            )
-            if resp.status_code == 200:
-                return resp.text
-        except Exception:
-            pass
-        raise ValueError(
-            "Could not determine GCP project. Set GOOGLE_CLOUD_PROJECT env var."
-        )
-
-    def _get_gcp_region(self) -> str:
-        """Get GCP region from metadata or environment."""
-        region = os.environ.get("GOOGLE_CLOUD_REGION") or os.environ.get("GCP_REGION")
-        if region:
-            return region
-        try:
-            import requests
-            resp = requests.get(
-                "http://metadata.google.internal/computeMetadata/v1/instance/zone",
-                headers={"Metadata-Flavor": "Google"},
-                timeout=2,
-            )
-            if resp.status_code == 200:
-                zone = resp.text.split("/")[-1]
-                return "-".join(zone.split("-")[:-1])
-        except Exception:
-            pass
-        return "us-central1"
 
     def _rate_limit(self):
         """Simple rate limiter."""
