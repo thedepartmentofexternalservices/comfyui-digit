@@ -1,0 +1,129 @@
+# DIGIT Default Training Configuration
+# Deep Infrastructure for Generative Image Training
+#
+# Usage:
+#   - Copy this file and customize for your training run
+#   - Or use the DIGIT LoRA Trainer node with presets
+#
+# Model presets (set model_type in the trainer node):
+#   flux1-dev, flux1-schnell, flux2, flux2-klein, qwen
+
+name: my_lora_training
+
+model:
+  name: flux1-dev
+  base_model_path: black-forest-labs/FLUX.1-dev
+  revision: null
+  dtype: bfloat16
+  text_encoder_dtype: bfloat16
+  vae_dtype: float32
+
+lora:
+  rank: 16
+  alpha: 16.0
+  dropout: 0.0
+  target_modules:
+    - to_q
+    - to_k
+    - to_v
+    - to_out.0
+    - proj_in
+    - proj_out
+    - ff.net.0.proj
+    - ff.net.2
+  use_dora: false
+  use_rslora: false
+
+dataset:
+  path: ""  # REQUIRED: set this to your dataset directory
+  resolution: 1024
+  center_crop: true
+  random_flip: false
+  caption_ext: .txt
+  use_bucketing: true
+  bucket_step: 64
+  min_bucket_resolution: 512
+  max_bucket_resolution: 2048
+
+optimizer:
+  name: adamw8bit
+  learning_rate: 1.0e-4
+  weight_decay: 0.01
+  betas: [0.9, 0.999]
+  eps: 1.0e-8
+
+scheduler:
+  name: cosine
+  warmup_steps: 100
+  num_cycles: 1
+
+training:
+  batch_size: 1
+  gradient_accumulation_steps: 1
+  max_train_steps: 1000
+  max_train_epochs: null
+  seed: 42
+  mixed_precision: bf16
+  gradient_checkpointing: true
+  max_grad_norm: 1.0
+  use_ema: false
+  noise_offset: 0.0
+  min_snr_gamma: 0.0
+
+sampling:
+  enabled: true
+  every_n_steps: 100
+  prompts:
+    - "a photo of [trigger_phrase]"
+    - "a portrait of [trigger_phrase] in cinematic lighting"
+    - "[trigger_phrase] in a dramatic scene"
+    - "a close-up of [trigger], sharp focus, studio lighting"
+  num_inference_steps: 28
+  guidance_scale: 3.5
+  width: 1024
+  height: 1024
+  seed: 42
+
+logging:
+  use_wandb: false
+  use_tensorboard: true
+  wandb_project: digit-lora
+  log_dir: ./logs
+  log_every_n_steps: 10
+
+caption:
+  model: gemini-2.5-flash
+  system_prompt: >-
+    You are an expert image captioner for AI training datasets.
+    Describe the image in detail, focusing on subject, composition,
+    lighting, colors, style, and mood. Be specific and descriptive.
+    Output only the caption, no preamble.
+  prompt_template: "Describe this image in detail for AI training:"
+  max_tokens: 300
+  temperature: 0.4
+  batch_size: 5
+  requests_per_minute: 30
+  output_ext: .txt
+
+trigger:
+  # Primary trigger word — a rare/unique token (e.g., "ohwx", "sks", "p3rs0n")
+  trigger_word: ""
+  # Class noun — what the subject is (e.g., "person", "man", "woman", "dog", "style")
+  trigger_class: ""
+  # Combined phrase — auto-built as "{trigger_word} {trigger_class}" if left empty
+  trigger_phrase: ""
+
+naming:
+  # Templates for output naming. Available variables:
+  #   {name} {model} {trigger} {trigger_class} {rank} {alpha}
+  #   {steps} {res} {date} {datetime} {seed} {optimizer} {lr}
+  output_dir_template: "{name}_{model}_r{rank}_{date}"
+  lora_name_template: "{name}_{model}_r{rank}_s{steps}"
+  checkpoint_template: "step_{step:06d}"
+  sample_template: "sample_{prompt_index:02d}_{step:06d}"
+
+output:
+  output_dir: ./output
+  save_every_n_steps: 500
+  save_final: true
+  lora_name: digit_lora

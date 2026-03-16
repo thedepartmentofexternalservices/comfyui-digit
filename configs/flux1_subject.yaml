@@ -1,0 +1,55 @@
+# DIGIT Config: Flux.1 Subject/Person LoRA
+# Good starting point for training a person or character LoRA
+
+name: flux1_subject
+
+model:
+  name: flux1-dev
+  base_model_path: black-forest-labs/FLUX.1-dev
+  dtype: bfloat16
+
+lora:
+  rank: 16
+  alpha: 16.0
+  dropout: 0.05
+
+dataset:
+  resolution: 1024
+  center_crop: true
+  random_flip: false
+  use_bucketing: true
+
+optimizer:
+  name: adamw8bit
+  learning_rate: 4.0e-5
+  weight_decay: 0.01
+
+scheduler:
+  name: cosine
+  warmup_steps: 50
+
+training:
+  batch_size: 1
+  gradient_accumulation_steps: 4
+  max_train_steps: 1500
+  mixed_precision: bf16
+  gradient_checkpointing: true
+  noise_offset: 0.05
+
+sampling:
+  enabled: true
+  every_n_steps: 100
+  prompts:
+    - "a portrait photo of [trigger]"
+    - "a photo of [trigger] standing outdoors in natural light"
+    - "[trigger] in a cinematic scene, dramatic lighting"
+    - "a close-up photo of [trigger], sharp focus, studio lighting"
+  guidance_scale: 3.5
+
+logging:
+  use_tensorboard: true
+  log_every_n_steps: 5
+
+output:
+  save_every_n_steps: 500
+  save_final: true

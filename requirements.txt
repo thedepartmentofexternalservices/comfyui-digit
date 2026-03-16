@@ -4,3 +4,15 @@ google-genai
 google-cloud-storage
 piexif
 opencv-python
+pyyaml
+
+# Training dependencies (install with: pip install -r requirements-training.txt)
+# torch>=2.1.0
+# diffusers>=0.30.0
+# transformers>=4.40.0
+# peft>=0.12.0
+# accelerate>=0.30.0
+# bitsandbytes>=0.43.0
+# tensorboard
+# wandb
+# safetensors

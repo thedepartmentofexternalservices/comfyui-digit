@@ -1,0 +1,54 @@
+# DIGIT Config: Flux.1 Style LoRA
+# For training artistic style transfer LoRAs
+
+name: flux1_style
+
+model:
+  name: flux1-dev
+  base_model_path: black-forest-labs/FLUX.1-dev
+  dtype: bfloat16
+
+lora:
+  rank: 32
+  alpha: 32.0
+  dropout: 0.0
+
+dataset:
+  resolution: 1024
+  center_crop: true
+  random_flip: true
+  use_bucketing: true
+
+optimizer:
+  name: adamw8bit
+  learning_rate: 1.0e-4
+  weight_decay: 0.01
+
+scheduler:
+  name: cosine
+  warmup_steps: 100
+
+training:
+  batch_size: 1
+  gradient_accumulation_steps: 2
+  max_train_steps: 2000
+  mixed_precision: bf16
+  gradient_checkpointing: true
+  noise_offset: 0.0
+
+sampling:
+  enabled: true
+  every_n_steps: 200
+  prompts:
+    - "a landscape in the style of [trigger]"
+    - "a portrait in the style of [trigger]"
+    - "an abstract scene in the style of [trigger]"
+  guidance_scale: 3.5
+
+logging:
+  use_tensorboard: true
+  log_every_n_steps: 10
+
+output:
+  save_every_n_steps: 500
+  save_final: true

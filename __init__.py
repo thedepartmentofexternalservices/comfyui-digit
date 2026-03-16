@@ -15,6 +15,11 @@ from .dataset_prep_node import DigitDatasetPrep
 from .caption_viewer_node import DigitCaptionViewer
 from .console_doctor_node import DigitConsoleDoctor
 from .caption_find_replace_node import DigitCaptionFindReplace
+from .frame_size_node import DigitFrameSize
+from .dataset_node import DigitDatasetManager
+from .captioner_node import DigitCaptioner, DigitCaptionPresetManager
+from .trainer_node import DigitLoRATrainer, DigitLoRALoader
+from .preset_node import DigitNamingPreset, DigitTriggerPreset, DigitSamplePromptPreset
 
 NODE_CLASS_MAPPINGS = {
     "DigitLLMQuery": LLMQueryNode,
@@ -36,6 +41,16 @@ NODE_CLASS_MAPPINGS = {
     "DigitCaptionViewer": DigitCaptionViewer,
     "DigitConsoleDoctor": DigitConsoleDoctor,
     "DigitCaptionFindReplace": DigitCaptionFindReplace,
+    "DigitFrameSize": DigitFrameSize,
+    # Training nodes
+    "DigitDatasetManager": DigitDatasetManager,
+    "DigitCaptioner": DigitCaptioner,
+    "DigitCaptionPresetManager": DigitCaptionPresetManager,
+    "DigitLoRATrainer": DigitLoRATrainer,
+    "DigitLoRALoader": DigitLoRALoader,
+    "DigitNamingPreset": DigitNamingPreset,
+    "DigitTriggerPreset": DigitTriggerPreset,
+    "DigitSamplePromptPreset": DigitSamplePromptPreset,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -58,6 +73,16 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "DigitCaptionViewer": "DIGIT Caption Viewer",
     "DigitConsoleDoctor": "DIGIT Console Doctor",
     "DigitCaptionFindReplace": "DIGIT Caption Find & Replace",
+    "DigitFrameSize": "DIGIT Frame Size",
+    # Training nodes
+    "DigitDatasetManager": "DIGIT Dataset Manager",
+    "DigitCaptioner": "DIGIT Captioner",
+    "DigitCaptionPresetManager": "DIGIT Caption Preset Manager",
+    "DigitLoRATrainer": "DIGIT LoRA Trainer",
+    "DigitLoRALoader": "DIGIT LoRA Loader",
+    "DigitNamingPreset": "DIGIT Naming Preset",
+    "DigitTriggerPreset": "DIGIT Trigger Preset",
+    "DigitSamplePromptPreset": "DIGIT Sample Prompt Preset",
 }
 
 WEB_DIRECTORY = "./web"
