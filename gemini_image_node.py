@@ -7,7 +7,7 @@ import numpy as np
 import torch
 from PIL import Image
 
-from .gcp_config import resolve_gcp_config
+from .gcp_config import resolve_gcp_config, default_project, default_region
 
 logger = logging.getLogger(__name__)
 
@@ -76,8 +76,8 @@ class DigitGeminiImage:
                 "resolution": (cls.RESOLUTIONS, {"default": "1K"}),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 2147483647}),
                 "temperature": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.01}),
-                "gcp_project_id": ("STRING", {"default": "", "tooltip": "GCP project ID. Auto-detected from DIGIT_GCP_PROJECT env var or GCP metadata."}),
-                "gcp_region": ("STRING", {"default": "", "tooltip": "GCP region. Auto-detected from DIGIT_GCP_REGION env var or GCP metadata. Defaults to 'global'."}),
+                "gcp_project_id": ("STRING", {"default": default_project(), "tooltip": "GCP project ID. Auto-detected from DIGIT_GCP_PROJECT env var or GCP metadata."}),
+                "gcp_region": ("STRING", {"default": default_region(), "tooltip": "GCP region. Auto-detected from DIGIT_GCP_REGION env var or GCP metadata. Defaults to 'global'."}),
             },
             "optional": {
                 "image1": ("IMAGE",),

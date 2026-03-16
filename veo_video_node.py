@@ -8,7 +8,7 @@ import numpy as np
 from PIL import Image as PILImage
 
 import folder_paths
-from .gcp_config import resolve_gcp_config, resolve_gcs_uri
+from .gcp_config import resolve_gcp_config, resolve_gcs_uri, default_project, default_region, default_gcs_uri
 
 logger = logging.getLogger(__name__)
 
@@ -49,8 +49,8 @@ class DigitVeoVideo:
                 "duration_seconds": ("INT", {"default": 8, "min": 4, "max": 8, "step": 2}),
                 "generate_audio": ("BOOLEAN", {"default": True}),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 2147483647}),
-                "gcp_project_id": ("STRING", {"default": "", "tooltip": "GCP project ID. Auto-detected from DIGIT_GCP_PROJECT env var or GCP metadata."}),
-                "gcp_region": ("STRING", {"default": "", "tooltip": "GCP region. Auto-detected from DIGIT_GCP_REGION env var or GCP metadata. Defaults to 'us-central1' for Veo."}),
+                "gcp_project_id": ("STRING", {"default": default_project(), "tooltip": "GCP project ID. Auto-detected from DIGIT_GCP_PROJECT env var or GCP metadata."}),
+                "gcp_region": ("STRING", {"default": default_region(), "tooltip": "GCP region. Auto-detected from DIGIT_GCP_REGION env var or GCP metadata. Defaults to 'us-central1' for Veo."}),
             },
             "optional": {
                 "first_frame": ("IMAGE",),
@@ -62,7 +62,7 @@ class DigitVeoVideo:
                 "person_generation": (["allow_adult", "dont_allow"], {"default": "allow_adult"}),
                 "sample_count": ("INT", {"default": 1, "min": 1, "max": 4}),
                 "compression_quality": (["lossless", "optimized"], {"default": "lossless"}),
-                "output_gcs_uri": ("STRING", {"default": "", "tooltip": "GCS bucket URI for lossless output. Auto-detected from DIGIT_GCS_URI env var, e.g. gs://my-bucket/output/"}),
+                "output_gcs_uri": ("STRING", {"default": default_gcs_uri(), "tooltip": "GCS bucket URI for lossless output. Auto-detected from DIGIT_GCS_URI env var, e.g. gs://my-bucket/output/"}),
                 "enhance_prompt": ("BOOLEAN", {"default": True}),
             },
         }

@@ -5,7 +5,7 @@ import re
 
 import requests
 
-from .gcp_config import get_gcp_access_token, build_vertex_url, resolve_gcp_config
+from .gcp_config import get_gcp_access_token, build_vertex_url, resolve_gcp_config, default_project, default_region
 
 logger = logging.getLogger(__name__)
 
@@ -133,11 +133,11 @@ class DigitConsoleDoctor:
                     "tooltip": "Maximum number of log entries to send to Gemini.",
                 }),
                 "gcp_project_id": ("STRING", {
-                    "default": "",
+                    "default": default_project(),
                     "tooltip": "GCP project ID. Auto-detected from DIGIT_GCP_PROJECT env var or GCP metadata.",
                 }),
                 "gcp_region": ("STRING", {
-                    "default": "",
+                    "default": default_region(),
                     "tooltip": "GCP region. Auto-detected from DIGIT_GCP_REGION env var or GCP metadata. Defaults to 'global'.",
                 }),
             },

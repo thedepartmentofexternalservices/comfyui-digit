@@ -8,7 +8,7 @@ from html.parser import HTMLParser
 from server import PromptServer
 from aiohttp import web
 
-from .gcp_config import resolve_gcp_config
+from .gcp_config import resolve_gcp_config, default_project, default_region
 from .projekts_utils import PROJEKTS_ROOTS, scan_projects
 
 logger = logging.getLogger(__name__)
@@ -199,11 +199,11 @@ class DigitSRTMaker:
                 "project": (projects,),
                 "filename": ("STRING", {"default": "dialogue"}),
                 "gcp_project_id": ("STRING", {
-                    "default": "",
+                    "default": default_project(),
                     "tooltip": "GCP project ID. Auto-detected from DIGIT_GCP_PROJECT env var or GCP metadata.",
                 }),
                 "gcp_region": ("STRING", {
-                    "default": "",
+                    "default": default_region(),
                     "tooltip": "GCP region. Auto-detected from DIGIT_GCP_REGION env var or GCP metadata. Defaults to 'global'.",
                 }),
             },

@@ -9,6 +9,8 @@ from .gcp_config import (
     get_gcp_access_token,
     build_vertex_url,
     resolve_gcp_config,
+    default_project,
+    default_region,
 )
 
 
@@ -32,8 +34,8 @@ class LLMQueryNode:
             "required": {
                 "model": (cls.MODELS, {"default": cls.MODELS[0]}),
                 "prompt": ("STRING", {"default": "", "multiline": True}),
-                "gcp_project_id": ("STRING", {"default": "", "tooltip": "GCP project ID. Auto-detected from DIGIT_GCP_PROJECT env var or GCP metadata."}),
-                "gcp_region": ("STRING", {"default": "", "tooltip": "GCP region. Auto-detected from DIGIT_GCP_REGION env var or GCP metadata. Defaults to 'global'."}),
+                "gcp_project_id": ("STRING", {"default": default_project(), "tooltip": "GCP project ID. Auto-detected from DIGIT_GCP_PROJECT env var or GCP metadata."}),
+                "gcp_region": ("STRING", {"default": default_region(), "tooltip": "GCP region. Auto-detected from DIGIT_GCP_REGION env var or GCP metadata. Defaults to 'global'."}),
             },
             "optional": {
                 "system_prompt": ("STRING", {"default": "", "multiline": True}),

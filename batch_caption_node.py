@@ -11,7 +11,7 @@ import numpy as np
 import requests
 from PIL import Image
 
-from .gcp_config import get_gcp_access_token, build_vertex_url, resolve_gcp_config
+from .gcp_config import get_gcp_access_token, build_vertex_url, resolve_gcp_config, default_project, default_region
 
 logger = logging.getLogger(__name__)
 
@@ -144,11 +144,11 @@ class DigitBatchCaption:
                     "tooltip": "Overwrite existing .txt caption files. If false, skips images that already have captions.",
                 }),
                 "gcp_project_id": ("STRING", {
-                    "default": "",
+                    "default": default_project(),
                     "tooltip": "GCP project ID. Auto-detected from DIGIT_GCP_PROJECT env var or GCP metadata.",
                 }),
                 "gcp_region": ("STRING", {
-                    "default": "",
+                    "default": default_region(),
                     "tooltip": "GCP region. Auto-detected from DIGIT_GCP_REGION env var or GCP metadata. Defaults to 'global'.",
                 }),
             },

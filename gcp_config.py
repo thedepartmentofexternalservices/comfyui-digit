@@ -117,3 +117,32 @@ def resolve_gcs_uri(node_value="", fallback=""):
     if uri:
         return uri
     return os.environ.get("DIGIT_GCS_URI", fallback)
+
+
+# ---------------------------------------------------------------------------
+# Default values for INPUT_TYPES (read env vars at import time)
+# ---------------------------------------------------------------------------
+
+def default_project():
+    """Return the default project ID for node UI fields."""
+    return (
+        os.environ.get("DIGIT_GCP_PROJECT")
+        or os.environ.get("GOOGLE_CLOUD_PROJECT")
+        or os.environ.get("GCP_PROJECT_ID")
+        or ""
+    )
+
+
+def default_region():
+    """Return the default region for node UI fields."""
+    return (
+        os.environ.get("DIGIT_GCP_REGION")
+        or os.environ.get("GOOGLE_CLOUD_REGION")
+        or os.environ.get("GCP_REGION")
+        or ""
+    )
+
+
+def default_gcs_uri():
+    """Return the default GCS URI for node UI fields."""
+    return os.environ.get("DIGIT_GCS_URI", "")
