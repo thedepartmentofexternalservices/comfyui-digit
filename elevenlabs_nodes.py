@@ -79,7 +79,18 @@ def _audio_tensor_to_wav_bytes(waveform, sample_rate):
 
 
 def _mp3_bytes_to_audio_tensor(mp3_bytes):
-    """Convert MP3/audio bytes to ComfyUI AUDIO dict using pydub or ffmpeg."""
+    """Convert MP3/audio bytes to ComfyUI AUDIO dict using torchaudio or pydub."""
+    # Try torchaudio first (usually available in ComfyUI venvs)
+    try:
+        import torchaudio
+        waveform, sr = torchaudio.load(io.BytesIO(mp3_bytes))
+        if waveform.shape[0] > 1:
+            waveform = waveform.mean(dim=0, keepdim=True)
+        return {"waveform": waveform.unsqueeze(0), "sample_rate": sr}
+    except Exception:
+        pass
+
+    # Fallback: pydub (requires ffmpeg)
     try:
         from pydub import AudioSegment
         seg = AudioSegment.from_file(io.BytesIO(mp3_bytes))
@@ -88,22 +99,11 @@ def _mp3_bytes_to_audio_tensor(mp3_bytes):
             samples = samples.reshape(-1, seg.channels).mean(axis=1)
         waveform = torch.from_numpy(samples).unsqueeze(0)  # (1, samples)
         return {"waveform": waveform.unsqueeze(0), "sample_rate": seg.frame_rate}
-    except ImportError:
-        pass
-
-    # Fallback: try torchaudio
-    try:
-        import torchaudio
-        waveform, sr = torchaudio.load(io.BytesIO(mp3_bytes))
-        # Mix to mono
-        if waveform.shape[0] > 1:
-            waveform = waveform.mean(dim=0, keepdim=True)
-        return {"waveform": waveform.unsqueeze(0), "sample_rate": sr}
     except Exception:
         pass
 
     raise RuntimeError(
-        "Cannot decode audio. Install pydub (pip install pydub) or torchaudio."
+        "Cannot decode audio. Install torchaudio or pydub (pip install pydub) + ffmpeg."
     )
 
 
