@@ -78,33 +78,11 @@ def _audio_tensor_to_wav_bytes(waveform, sample_rate):
     return buf.getvalue()
 
 
-def _mp3_bytes_to_audio_tensor(mp3_bytes):
-    """Convert MP3/audio bytes to ComfyUI AUDIO dict using torchaudio or pydub."""
-    # Try torchaudio first (usually available in ComfyUI venvs)
-    try:
-        import torchaudio
-        waveform, sr = torchaudio.load(io.BytesIO(mp3_bytes))
-        if waveform.shape[0] > 1:
-            waveform = waveform.mean(dim=0, keepdim=True)
-        return {"waveform": waveform.unsqueeze(0), "sample_rate": sr}
-    except Exception:
-        pass
-
-    # Fallback: pydub (requires ffmpeg)
-    try:
-        from pydub import AudioSegment
-        seg = AudioSegment.from_file(io.BytesIO(mp3_bytes))
-        samples = np.array(seg.get_array_of_samples(), dtype=np.float32) / 32768.0
-        if seg.channels > 1:
-            samples = samples.reshape(-1, seg.channels).mean(axis=1)
-        waveform = torch.from_numpy(samples).unsqueeze(0)  # (1, samples)
-        return {"waveform": waveform.unsqueeze(0), "sample_rate": seg.frame_rate}
-    except Exception:
-        pass
-
-    raise RuntimeError(
-        "Cannot decode audio. Install torchaudio or pydub (pip install pydub) + ffmpeg."
-    )
+def _pcm_bytes_to_audio_tensor(pcm_bytes, sample_rate=44100):
+    """Convert raw PCM 16-bit signed LE bytes to ComfyUI AUDIO dict."""
+    samples = np.frombuffer(pcm_bytes, dtype=np.int16).astype(np.float32) / 32768.0
+    waveform = torch.from_numpy(samples).unsqueeze(0)  # (1, num_samples)
+    return {"waveform": waveform.unsqueeze(0), "sample_rate": sample_rate}
 
 
 def _headers(api_key):
@@ -157,7 +135,7 @@ class DigitElevenLabsTTS:
                 "style": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 0.2, "step": 0.01}),
                 "use_speaker_boost": ("BOOLEAN", {"default": False}),
                 "apply_text_normalization": (["auto", "on", "off"], {"default": "auto"}),
-                "output_format": (["mp3_44100_192", "opus_48000_192", "mp3_44100_128", "mp3_44100_64"], {"default": "mp3_44100_192"}),
+                "output_format": (["pcm_44100", "mp3_44100_192", "opus_48000_192"], {"default": "pcm_44100"}),
             },
         }
 
@@ -168,7 +146,7 @@ class DigitElevenLabsTTS:
 
     def generate(self, text, voice_id, model, stability, similarity_boost, speed, seed,
                  api_key="", language_code="", style=0.0, use_speaker_boost=False,
-                 apply_text_normalization="auto", output_format="mp3_44100_192"):
+                 apply_text_normalization="auto", output_format="pcm_44100"):
         if not text.strip():
             raise ValueError("Text is required")
         if not voice_id.strip():
@@ -196,7 +174,7 @@ class DigitElevenLabsTTS:
 
         resp = requests.post(url, headers=_headers(key), json=body, params=params, timeout=300)
         resp.raise_for_status()
-        return (_mp3_bytes_to_audio_tensor(resp.content),)
+        return (_pcm_bytes_to_audio_tensor(resp.content),)
 
 
 # ── Speech to Text ────────────────────────────────────────────────────────────
@@ -288,7 +266,7 @@ class DigitElevenLabsSFX:
             "optional": {
                 "api_key": ("STRING", {"default": default_api_key(), "tooltip": "ElevenLabs API key. Auto-detected from ELEVENLABS_API_KEY env var."}),
                 "loop": ("BOOLEAN", {"default": False, "tooltip": "Create a smoothly looping sound effect."}),
-                "output_format": (["mp3_44100_192", "opus_48000_192"], {"default": "mp3_44100_192"}),
+                "output_format": (["pcm_44100", "mp3_44100_192", "opus_48000_192"], {"default": "pcm_44100"}),
             },
         }
 
@@ -298,7 +276,7 @@ class DigitElevenLabsSFX:
     CATEGORY = "DIGIT/ElevenLabs"
 
     def generate(self, text, duration, prompt_influence, api_key="", loop=False,
-                 output_format="mp3_44100_192"):
+                 output_format="pcm_44100"):
         if not text.strip():
             raise ValueError("Text description is required")
 
@@ -316,7 +294,7 @@ class DigitElevenLabsSFX:
 
         resp = requests.post(url, headers=_headers(key), json=body, params=params, timeout=300)
         resp.raise_for_status()
-        return (_mp3_bytes_to_audio_tensor(resp.content),)
+        return (_pcm_bytes_to_audio_tensor(resp.content),)
 
 
 # ── Voice Isolation ───────────────────────────────────────────────────────────
@@ -344,10 +322,11 @@ class DigitElevenLabsVoiceIsolation:
 
         url = f"{ELEVENLABS_API_BASE}/audio-isolation"
         files = {"audio": ("audio.wav", wav_bytes, "audio/wav")}
+        params = {"output_format": "pcm_44100"}
 
-        resp = requests.post(url, headers=_headers(key), files=files, timeout=300)
+        resp = requests.post(url, headers=_headers(key), files=files, params=params, timeout=300)
         resp.raise_for_status()
-        return (_mp3_bytes_to_audio_tensor(resp.content),)
+        return (_pcm_bytes_to_audio_tensor(resp.content),)
 
 
 # ── Instant Voice Clone ───────────────────────────────────────────────────────
@@ -420,7 +399,7 @@ class DigitElevenLabsSTS:
                 "style": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 0.2, "step": 0.01}),
                 "use_speaker_boost": ("BOOLEAN", {"default": False}),
                 "remove_background_noise": ("BOOLEAN", {"default": False}),
-                "output_format": (["mp3_44100_192", "opus_48000_192"], {"default": "mp3_44100_192"}),
+                "output_format": (["pcm_44100", "mp3_44100_192", "opus_48000_192"], {"default": "pcm_44100"}),
             },
         }
 
@@ -431,7 +410,7 @@ class DigitElevenLabsSTS:
 
     def transform(self, audio, voice_id, model, stability, similarity_boost, seed,
                   api_key="", speed=1.0, style=0.0, use_speaker_boost=False,
-                  remove_background_noise=False, output_format="mp3_44100_192"):
+                  remove_background_noise=False, output_format="pcm_44100"):
         if not voice_id.strip():
             raise ValueError("Voice ID is required.")
 
@@ -460,7 +439,7 @@ class DigitElevenLabsSTS:
         resp = requests.post(url, headers=_headers(key), data=data, files=files,
                              params=params, timeout=300)
         resp.raise_for_status()
-        return (_mp3_bytes_to_audio_tensor(resp.content),)
+        return (_pcm_bytes_to_audio_tensor(resp.content),)
 
 
 # ── Text to Dialogue ──────────────────────────────────────────────────────────
@@ -499,7 +478,7 @@ class DigitElevenLabsDialogue:
                 "voice_id10": ("STRING", {"default": ""}),
                 "language_code": ("STRING", {"default": ""}),
                 "apply_text_normalization": (["auto", "on", "off"], {"default": "auto"}),
-                "output_format": (["mp3_44100_192", "opus_48000_192"], {"default": "mp3_44100_192"}),
+                "output_format": (["pcm_44100", "mp3_44100_192", "opus_48000_192"], {"default": "pcm_44100"}),
             },
         }
 
@@ -510,7 +489,7 @@ class DigitElevenLabsDialogue:
 
     def generate(self, text1, voice_id1, num_entries, model, stability, seed,
                  api_key="", language_code="", apply_text_normalization="auto",
-                 output_format="mp3_44100_192", **kwargs):
+                 output_format="pcm_44100", **kwargs):
         key = resolve_api_key(api_key)
 
         # Build dialogue inputs from numbered text/voice pairs
@@ -545,4 +524,4 @@ class DigitElevenLabsDialogue:
 
         resp = requests.post(url, headers=_headers(key), json=body, params=params, timeout=300)
         resp.raise_for_status()
-        return (_mp3_bytes_to_audio_tensor(resp.content),)
+        return (_pcm_bytes_to_audio_tensor(resp.content),)
