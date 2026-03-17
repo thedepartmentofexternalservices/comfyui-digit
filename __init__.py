@@ -20,6 +20,16 @@ from .dataset_node import DigitDatasetManager
 from .captioner_node import DigitCaptioner, DigitCaptionPresetManager
 from .trainer_node import DigitLoRATrainer, DigitLoRALoader
 from .preset_node import DigitNamingPreset, DigitTriggerPreset, DigitSamplePromptPreset
+from .elevenlabs_nodes import (
+    DigitElevenLabsVoiceSelector,
+    DigitElevenLabsTTS,
+    DigitElevenLabsSTT,
+    DigitElevenLabsSFX,
+    DigitElevenLabsVoiceIsolation,
+    DigitElevenLabsVoiceClone,
+    DigitElevenLabsSTS,
+    DigitElevenLabsDialogue,
+)
 
 NODE_CLASS_MAPPINGS = {
     "DigitLLMQuery": LLMQueryNode,
@@ -51,6 +61,15 @@ NODE_CLASS_MAPPINGS = {
     "DigitNamingPreset": DigitNamingPreset,
     "DigitTriggerPreset": DigitTriggerPreset,
     "DigitSamplePromptPreset": DigitSamplePromptPreset,
+    # ElevenLabs nodes
+    "DigitElevenLabsVoiceSelector": DigitElevenLabsVoiceSelector,
+    "DigitElevenLabsTTS": DigitElevenLabsTTS,
+    "DigitElevenLabsSTT": DigitElevenLabsSTT,
+    "DigitElevenLabsSFX": DigitElevenLabsSFX,
+    "DigitElevenLabsVoiceIsolation": DigitElevenLabsVoiceIsolation,
+    "DigitElevenLabsVoiceClone": DigitElevenLabsVoiceClone,
+    "DigitElevenLabsSTS": DigitElevenLabsSTS,
+    "DigitElevenLabsDialogue": DigitElevenLabsDialogue,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -83,6 +102,15 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "DigitNamingPreset": "DIGIT Naming Preset",
     "DigitTriggerPreset": "DIGIT Trigger Preset",
     "DigitSamplePromptPreset": "DIGIT Sample Prompt Preset",
+    # ElevenLabs nodes
+    "DigitElevenLabsVoiceSelector": "DIGIT ElevenLabs Voice Selector",
+    "DigitElevenLabsTTS": "DIGIT ElevenLabs Text to Speech",
+    "DigitElevenLabsSTT": "DIGIT ElevenLabs Speech to Text",
+    "DigitElevenLabsSFX": "DIGIT ElevenLabs Sound Effects",
+    "DigitElevenLabsVoiceIsolation": "DIGIT ElevenLabs Voice Isolation",
+    "DigitElevenLabsVoiceClone": "DIGIT ElevenLabs Voice Clone",
+    "DigitElevenLabsSTS": "DIGIT ElevenLabs Speech to Speech",
+    "DigitElevenLabsDialogue": "DIGIT ElevenLabs Dialogue",
 }
 
 WEB_DIRECTORY = "./web"
