@@ -194,7 +194,7 @@ class DigitElevenLabsTTS:
         if language_code.strip():
             body["language_code"] = language_code.strip()
 
-        resp = requests.post(url, headers=_headers(key), json=body, params=params, timeout=120)
+        resp = requests.post(url, headers=_headers(key), json=body, params=params, timeout=300)
         resp.raise_for_status()
         return (_mp3_bytes_to_audio_tensor(resp.content),)
 
@@ -314,7 +314,7 @@ class DigitElevenLabsSFX:
         if loop:
             body["loop"] = True
 
-        resp = requests.post(url, headers=_headers(key), json=body, params=params, timeout=120)
+        resp = requests.post(url, headers=_headers(key), json=body, params=params, timeout=300)
         resp.raise_for_status()
         return (_mp3_bytes_to_audio_tensor(resp.content),)
 
@@ -392,7 +392,7 @@ class DigitElevenLabsVoiceClone:
             "remove_background_noise": str(remove_background_noise).lower(),
         }
 
-        resp = requests.post(url, headers=_headers(key), data=data, files=files, timeout=120)
+        resp = requests.post(url, headers=_headers(key), data=data, files=files, timeout=300)
         resp.raise_for_status()
         result = resp.json()
         return (result["voice_id"],)
@@ -458,7 +458,7 @@ class DigitElevenLabsSTS:
         files = {"audio": ("audio.wav", wav_bytes, "audio/wav")}
 
         resp = requests.post(url, headers=_headers(key), data=data, files=files,
-                             params=params, timeout=120)
+                             params=params, timeout=300)
         resp.raise_for_status()
         return (_mp3_bytes_to_audio_tensor(resp.content),)
 
@@ -543,6 +543,6 @@ class DigitElevenLabsDialogue:
         if language_code.strip():
             body["language_code"] = language_code.strip()
 
-        resp = requests.post(url, headers=_headers(key), json=body, params=params, timeout=120)
+        resp = requests.post(url, headers=_headers(key), json=body, params=params, timeout=300)
         resp.raise_for_status()
         return (_mp3_bytes_to_audio_tensor(resp.content),)
