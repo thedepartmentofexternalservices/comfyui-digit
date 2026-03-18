@@ -45,8 +45,8 @@ def _image_tensor_to_png_bytes(image_tensor):
 
 
 def _png_bytes_to_tensor(png_bytes):
-    """Convert PNG bytes to a ComfyUI IMAGE tensor (1,H,W,C float32 0-1)."""
-    img = Image.open(io.BytesIO(png_bytes)).convert("RGBA")
+    """Convert PNG bytes to a ComfyUI IMAGE tensor (1,H,W,3 float32 0-1)."""
+    img = Image.open(io.BytesIO(png_bytes)).convert("RGB")
     img_np = np.array(img).astype(np.float32) / 255.0
     return torch.from_numpy(img_np).unsqueeze(0)
 
@@ -211,11 +211,12 @@ class DigitGeminiImage:
                             text_parts.append(part.text)
 
         if not image_tensors:
-            # Return a blank 1024x1024 RGBA image as fallback
+            # Return a blank 1024x1024 RGB image as fallback
             logger.warning("Gemini returned no images. Returning blank fallback.")
-            image_tensors.append(torch.zeros((1, 1024, 1024, 4)))
+            image_tensors.append(torch.zeros((1, 1024, 1024, 3)))
 
-        output_image = torch.cat(image_tensors, dim=0)
+        # Use first image only — multiple images may have different dimensions
+        output_image = image_tensors[0]
         output_text = "\n".join(text_parts)
 
         return (output_image, output_text)
