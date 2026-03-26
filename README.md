@@ -198,6 +198,198 @@ Automatically generate SRT subtitle files from scripts. Paste a Google Doc URL (
 
 ---
 
+### DIGIT SRT From Video
+
+Transcribe the audio from a video file into SRT subtitles using Gemini. Extracts audio via ffmpeg, sends it to Gemini for transcription with accurate timestamps, then runs a full post-processing pipeline before saving.
+
+**How it works:**
+
+1. Extracts audio from the video with ffmpeg (mono 16kHz WAV — small and fast)
+2. Sends audio to Gemini for transcription with precise timestamps
+3. Runs the post-processing pipeline: hallucination removal → line-length enforcement → frame padding → snap-to-frame
+4. Optionally translates to another language
+5. Saves in your chosen format(s) (SRT, VTT, ASS, TXT, or all)
+6. Optionally burns subtitles directly into the video with full styling control
+
+**Inputs:**
+
+| Input | Type | Default | Description |
+|-------|------|---------|-------------|
+| video_path | STRING | — | Path to the video file. Browse button in the UI. |
+| model | COMBO | gemini-2.5-flash | Gemini model for transcription. |
+| subtitle_output | COMBO | srt_only | `srt_only`: sidecar file(s). `burn_in_only`: hardcode subs into video. `both`: file(s) + burned-in video. |
+| extra_instructions | STRING | — | Additional instructions for Gemini (e.g. "ignore background music", "this is a commercial"). |
+| projekts_root | COMBO | (auto) | PROJEKTS volume root. |
+| project | COMBO | (auto) | Project folder (dynamic dropdown). |
+| filename | STRING | transcription | Output filename (without extension). |
+| gcp_project_id | STRING | (auto) | Your GCP project ID. |
+| gcp_region | STRING | global | Vertex AI region. |
+
+**Post-processing inputs (optional):**
+
+| Input | Type | Default | Description |
+|-------|------|---------|-------------|
+| identify_speakers | BOOLEAN | true | Label different speakers as SPEAKER 1, SPEAKER 2, etc. |
+| pad_frames | INT | 0 | Extend each subtitle by N frames on both head and tail. Gives captions breathing room. |
+| frame_rate | FLOAT | 23.976 | Video frame rate. Used for pad_frames and snap-to-frame calculations. |
+| snap_to_frames | BOOLEAN | false | Round all timestamps to nearest frame boundary. Prevents subtitle flicker on frame-accurate systems like Flame. |
+| max_chars_per_line | INT | 42 | Maximum characters per subtitle line. 42 = Netflix/broadcast standard. 0 = no enforcement. Lines exceeding this are word-wrapped. |
+| max_lines | INT | 2 | Maximum lines per subtitle entry. Entries exceeding this are split into multiple entries with proportional timing. |
+| remove_hallucinations | BOOLEAN | true | Detect and remove repeated/hallucinated entries (common LLM transcription artifact). |
+| output_format | COMBO | srt | `srt`, `vtt`, `ass`, `txt`, or `all` (saves all four formats). |
+| language | COMBO | auto | Audio language. 30+ languages supported. `auto` = let Gemini detect. Specifying improves accuracy. |
+| translate_to | COMBO | none | Translate subtitles after transcription. Preserves all SRT timing, only translates text. |
+
+**Burn-in styling inputs (optional):**
+
+| Input | Type | Default | Description |
+|-------|------|---------|-------------|
+| font_name | STRING | Arial | Font family for burned-in subtitles. |
+| font_size | INT | 24 | Font size (8–120). |
+| font_color | COMBO | white | Text color. 10 presets: white, yellow, cyan, green, red, orange, magenta, blue, black, gray. |
+| outline_color | COMBO | black | Outline/border color around text. |
+| outline_width | INT | 2 | Outline thickness (0–8). |
+| shadow_depth | INT | 1 | Drop shadow depth (0–8). |
+| position | COMBO | bottom_center | Where subtitles appear: bottom_center, bottom_left, bottom_right, top_center, top_left, top_right, middle_center. |
+| margin_v | INT | 30 | Vertical margin from screen edge in pixels (at 1080p). |
+
+**Outputs:**
+
+| Output | Type | Description |
+|--------|------|-------------|
+| srt_filepath | STRING | Path to the saved SRT file. |
+| srt_text | STRING | Raw SRT content as text. |
+
+**Output path:** `PROJEKTS/project/assets/auto_srt/filename.srt` (and `.vtt`, `.ass`, `.txt` if using `all` format)
+
+**Burn-in output:** When using `burn_in_only` or `both`, saves as `PROJEKTS/project/assets/auto_srt/filename_subtitled.mp4` (preserves original video extension). If an ASS file exists (from `all` or `ass` format), it's used for burn-in with full styling. Otherwise, force_style is applied to the SRT.
+
+---
+
+### DIGIT Batch SRT From Video
+
+Batch version of SRT From Video. Point it at a folder and it recursively finds all video files, transcribes each one, and saves the output. Designed for processing dozens of files unattended.
+
+**How it works:**
+
+1. Recursively scans the folder (and all subdirectories) for video files
+2. Filters by file type if specified (e.g. only `.mp4`, skip `.mov`)
+3. Skips files that already have output (unless overwrite is on)
+4. Transcribes each file through the same pipeline as the single-file node
+5. Shows progress bar in ComfyUI and per-file status in the log
+
+**Inputs (in addition to all post-processing and styling inputs from SRT From Video):**
+
+| Input | Type | Default | Description |
+|-------|------|---------|-------------|
+| video_folder | STRING | — | Top-level folder path. Browse button in UI. Scans recursively through all subdirectories. |
+| file_types | COMBO | all | Filter: `all`, `mp4`, `mov`, `mxf`, `mkv`, `avi`, `m4v`, `qt`. Use this when you have MOVs and MP4s in the same folder and only want to process one type. |
+| subtitle_output | COMBO | srt_only | Same as single-file node. |
+| model | COMBO | gemini-2.5-flash | Gemini model. |
+| output_mode | COMBO | alongside_video | `alongside_video`: saves `.srt` next to each video, wherever it lives in the tree. `projekts_auto_srt`: collects all output to one project folder. |
+| overwrite | BOOLEAN | false | Skip files that already have output. Set to true to regenerate everything. |
+| delay_seconds | FLOAT | 1.0 | Pause between API calls to avoid rate limiting. |
+| gcp_project_id | STRING | (auto) | Your GCP project ID. |
+| gcp_region | STRING | global | Vertex AI region. |
+
+**Outputs:**
+
+| Output | Type | Description |
+|--------|------|-------------|
+| log | STRING | Per-file status log with relative paths. Shows OK/SKIPPED/ERROR for each file. |
+| transcribed_count | INT | Number of files successfully transcribed. |
+| output_folder | STRING | The output directory path. |
+
+**Skip logic:** The skip check is output-mode-aware. If `subtitle_output` is `srt_only`, it checks for the `.srt` file. If `burn_in_only`, it checks for the `_subtitled` video. If `both`, it requires both to exist before skipping. This means you can re-run after errors and it picks up only the failures.
+
+**Log format:**
+```
+[1/27] 30_Hero_Pre/spot_01.mp4 -> OK (24 entries, .srt)
+[2/27] 30_Hero_Pre/spot_02.mp4 -> SKIPPED (exists)
+[3/27] Paid_Social/social_01.mp4 -> ERROR: ffmpeg audio extraction failed
+```
+
+---
+
+### DIGIT SRT Tools
+
+Post-process and manipulate existing SRT files. Takes SRT text (pasted or from a file) and applies transformations. Use this to clean up, convert, or adjust subtitle files after generation or from external sources.
+
+**Actions:**
+
+| Action | Description |
+|--------|-------------|
+| `post_process` | Full pipeline: hallucination removal → line-length enforcement → frame padding → snap-to-frame. Same pipeline as the transcription nodes. |
+| `convert_format` | Convert SRT to VTT, ASS/SSA, TXT, or all formats. ASS output includes full styling (font, color, outline, shadow, position). |
+| `time_offset` | Shift all timestamps by N milliseconds. Positive = later, negative = earlier. Useful for syncing subtitles to re-edited video. |
+| `merge` | Combine adjacent subtitle entries that have gaps smaller than a threshold (default 500ms). Reduces subtitle entry count for cleaner reading. |
+| `renumber` | Re-number all entries sequentially starting from 1. Fixes gaps after manual editing or merging. |
+
+**Inputs:**
+
+| Input | Type | Default | Description |
+|-------|------|---------|-------------|
+| srt_input | STRING | — | Paste SRT text directly. |
+| action | COMBO | post_process | Which operation to perform. |
+| srt_filepath | STRING | — | Path to an SRT file. Browse button in UI. Overrides srt_input if provided. |
+| save_filepath | STRING | — | Path to save output. Leave empty for text-only output (no file saved). |
+| time_offset_ms | INT | 0 | Milliseconds to shift (for `time_offset` action). Range -600000 to +600000. |
+| merge_gap_ms | INT | 500 | Maximum gap between entries to merge (for `merge` action). |
+
+Plus all post-processing inputs (pad_frames, frame_rate, snap_to_frames, max_chars_per_line, max_lines, remove_hallucinations) and all styling inputs (for ASS format conversion).
+
+**Outputs:**
+
+| Output | Type | Description |
+|--------|------|-------------|
+| output_text | STRING | Processed SRT/VTT/ASS/TXT text. |
+| output_filepath | STRING | Path to saved file (if save_filepath was set). |
+| log | STRING | Summary of what was done. |
+
+---
+
+### DIGIT SRT Preview
+
+Validate and QA-check SRT subtitle files. Shows a summary with entry count, duration, and character stats, plus warnings for common issues.
+
+**What it checks:**
+
+| Check | Description |
+|-------|-------------|
+| Overlapping timestamps | Entries where the start time is before the previous entry's end time. |
+| Long lines | Lines exceeding max_chars_per_line (default 42, Netflix/broadcast standard). |
+| Too many lines | Entries with more than 2 lines of text. |
+| Reading speed (CPS) | Characters per second exceeding max_cps (default 20, Netflix adult standard). Subtitle is on screen too briefly for comfortable reading. |
+| Bad timing | Entries with zero or negative duration. |
+
+**Inputs:**
+
+| Input | Type | Default | Description |
+|-------|------|---------|-------------|
+| srt_input | STRING | — | Paste SRT text directly. |
+| srt_filepath | STRING | — | Path to an SRT file. Browse button in UI. Overrides srt_input if provided. |
+| max_chars_per_line | INT | 42 | Flag lines exceeding this length. 0 = no check. |
+| max_cps | FLOAT | 20.0 | Flag entries with reading speed above this (characters per second). 0 = no check. Netflix standard: 20 CPS adult, 17 CPS children. |
+
+**Outputs:**
+
+| Output | Type | Description |
+|--------|------|-------------|
+| summary | STRING | Entry count, duration, character stats, warning count. |
+| entry_count | INT | Number of subtitle entries. |
+| warnings | STRING | All warnings, one per line. Empty if no issues found. |
+
+**Summary format:**
+```
+Entries: 47
+Duration: 2m 34s
+Total characters: 3842
+Avg chars/entry: 81
+Warnings: 3
+```
+
+---
+
 ### DIGIT Image Saver
 
 Save images to a VFX-pipeline folder structure with auto-incrementing frame numbers. Designed for production workflows where files need to follow a strict naming and directory convention.
@@ -354,7 +546,7 @@ Companion node for DIGIT Drag Crop. Takes the CROP_JSON string output and breaks
 3. Click Install
 4. Restart ComfyUI
 
-All 9 nodes will appear under the **DIGIT** category.
+All nodes will appear under the **DIGIT** category (and **DIGIT/ElevenLabs** for ElevenLabs nodes).
 
 ### Manual
 ```bash
@@ -423,7 +615,7 @@ PROJEKTS_ROOT/
 /mnt/lucid/PROJEKTS/25999_comfy_corner/assets/auto_srt/dialogue.srt
 ```
 
-The SRT Maker saves to `PROJECT/assets/auto_srt/` instead of the shots hierarchy.
+The SRT nodes (SRT Maker, SRT From Video) save to `PROJECT/assets/auto_srt/` instead of the shots hierarchy. The Batch SRT From Video node can save either alongside each video or to the `auto_srt` folder.
 
 **Supported PROJEKTS roots:**
 - `/Volumes/saint/goose/PROJEKTS` (macOS)
@@ -443,6 +635,7 @@ Project folders must follow the `#####_name` pattern (5-digit prefix) to appear 
 | `piexif` | EXIF metadata embedding in JPEG files |
 | `opencv-python` | EXR file reading and writing |
 | `requests` | HTTP requests for LLM Query node |
+| `ffmpeg` (system) | Audio extraction for SRT From Video nodes. Must be on PATH. |
 
 ---
 
