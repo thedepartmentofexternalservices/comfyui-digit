@@ -17,6 +17,7 @@ IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".exr", ".tif", ".tiff", ".bmp", ".
 FILTER_PRESETS = {
     "images": IMAGE_EXTENSIONS,
     "loras": {".safetensors", ".pt", ".ckpt"},
+    "videos": {".mp4", ".mov", ".qt", ".m4v", ".mkv", ".avi", ".mxf"},
     "all": None,  # show all files
 }
 
