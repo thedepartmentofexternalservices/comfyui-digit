@@ -3,10 +3,25 @@
 import os
 import re
 
-PROJEKTS_ROOTS = [
-    "/Volumes/saint/goose/PROJEKTS",
-    "/mnt/lucid/PROJEKTS",
+# Override with DIGIT_PROJEKTS_ROOTS env var (colon-separated paths).
+# Falls back to common mount points, then home directory.
+_DEFAULT_ROOTS = [
+    os.path.join(os.path.expanduser("~"), "PROJEKTS"),
 ]
+
+def _resolve_projekts_roots():
+    env = os.environ.get("DIGIT_PROJEKTS_ROOTS", "")
+    if env:
+        return [p.strip() for p in env.split(":") if p.strip()]
+    # Auto-detect common mount points
+    candidates = [
+        "/mnt/projekts/PROJEKTS",
+        "/Volumes/projekts/PROJEKTS",
+    ]
+    found = [c for c in candidates if os.path.isdir(c)]
+    return found if found else _DEFAULT_ROOTS
+
+PROJEKTS_ROOTS = _resolve_projekts_roots()
 
 PROJECT_RE = re.compile(r"^\d{5}_")
 FRAME_RE = re.compile(r"\.(\d+)\.[^.]+$")

@@ -414,7 +414,7 @@ Save images to a VFX-pipeline folder structure with auto-incrementing frame numb
 
 **Output path:** `PROJEKTS/project/shots/shot/subfolder/task/PREFIX_SHOT_TASK.FRAME.EXT`
 
-**Example:** `/mnt/lucid/PROJEKTS/25999_comfy_corner/shots/sh010/comfy/comp/25999_sh010_comp.1001.png`
+**Example:** `~/PROJEKTS/10001_my_project/shots/sh010/comfy/comp/10001_sh010_comp.1001.png`
 
 **EXR support:** Full 32-bit float EXR with OpenCV. Supports RGBA with inverted alpha (VFX convention). Tone mapping options let you convert from sRGB gamma space to linear on save.
 
@@ -600,7 +600,7 @@ The Image Saver, Video Saver, and Image Loader nodes use a VFX-pipeline folder c
 
 ```
 PROJEKTS_ROOT/
-  PROJECT_NAME/           (e.g. 25999_comfy_corner)
+  PROJECT_NAME/           (e.g. 10001_my_project)
     shots/
       SHOT_NAME/          (e.g. sh010)
         SUBFOLDER/        (e.g. comfy)
@@ -610,16 +610,21 @@ PROJEKTS_ROOT/
 
 **Example paths:**
 ```
-/mnt/lucid/PROJEKTS/25999_comfy_corner/shots/sh010/comfy/comp/25999_sh010_comp.1001.png
-/mnt/lucid/PROJEKTS/25999_comfy_corner/shots/sh010/comfy/comp/25999_sh010_comp.1001.mp4
-/mnt/lucid/PROJEKTS/25999_comfy_corner/assets/auto_srt/dialogue.srt
+~/PROJEKTS/10001_my_project/shots/sh010/comfy/comp/10001_sh010_comp.1001.png
+~/PROJEKTS/10001_my_project/shots/sh010/comfy/comp/10001_sh010_comp.1001.mp4
+~/PROJEKTS/10001_my_project/assets/auto_srt/dialogue.srt
 ```
 
 The SRT nodes (SRT Maker, SRT From Video) save to `PROJECT/assets/auto_srt/` instead of the shots hierarchy. The Batch SRT From Video node can save either alongside each video or to the `auto_srt` folder.
 
-**Supported PROJEKTS roots:**
-- `/Volumes/saint/goose/PROJEKTS` (macOS)
-- `/mnt/lucid/PROJEKTS` (Linux)
+**Configuring PROJEKTS roots:**
+
+Set the `DIGIT_PROJEKTS_ROOTS` environment variable to a colon-separated list of paths:
+```bash
+export DIGIT_PROJEKTS_ROOTS="/mnt/storage/PROJEKTS:/Volumes/shared/PROJEKTS"
+```
+
+If not set, the node auto-detects common mount points or falls back to `~/PROJEKTS`.
 
 Project folders must follow the `#####_name` pattern (5-digit prefix) to appear in the dropdown menus.
 

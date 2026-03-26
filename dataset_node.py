@@ -7,13 +7,14 @@ from pathlib import Path
 
 from .training.dataset import IMAGE_EXTENSIONS, find_image_caption_pairs
 
-# Platform-aware base paths
-if os.path.exists("/mnt/lucid"):
-    _BASE_PATH = "/mnt/lucid"
-elif os.path.exists("/Volumes/saint/goose"):
-    _BASE_PATH = "/Volumes/saint/goose"
-else:
-    _BASE_PATH = os.path.expanduser("~/datasets")
+# Resolve base path from env or auto-detect
+def _resolve_base_path():
+    env = os.environ.get("DIGIT_DATASET_BASE", "")
+    if env:
+        return env
+    return os.path.expanduser("~/datasets")
+
+_BASE_PATH = _resolve_base_path()
 
 
 class DigitDatasetManager:
