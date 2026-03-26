@@ -99,6 +99,42 @@ def _transcribe_single(video_path, client, model, system_prompt, user_prompt):
 
 SUBTITLE_OUTPUT_MODES = ["srt_only", "burn_in_only", "both"]
 
+SRT_TIMESTAMP_RE = re.compile(
+    r"(\d{2}):(\d{2}):(\d{2}),(\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2}),(\d{3})"
+)
+
+
+def _srt_ts_to_seconds(h, m, s, ms):
+    return int(h) * 3600 + int(m) * 60 + int(s) + int(ms) / 1000.0
+
+
+def _seconds_to_srt_ts(seconds):
+    if seconds < 0:
+        seconds = 0.0
+    h = int(seconds // 3600)
+    m = int((seconds % 3600) // 60)
+    s = int(seconds % 60)
+    ms = int((seconds % 1) * 1000)
+    return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
+
+
+def _pad_srt(srt_text, pad_frames, frame_rate):
+    """Pad each subtitle entry by pad_frames on both sides."""
+    if pad_frames <= 0 or frame_rate <= 0:
+        return srt_text
+    pad_seconds = pad_frames / frame_rate
+
+    def _replace(match):
+        start = _srt_ts_to_seconds(
+            match.group(1), match.group(2), match.group(3), match.group(4))
+        end = _srt_ts_to_seconds(
+            match.group(5), match.group(6), match.group(7), match.group(8))
+        start = max(0, start - pad_seconds)
+        end = end + pad_seconds
+        return f"{_seconds_to_srt_ts(start)} --> {_seconds_to_srt_ts(end)}"
+
+    return SRT_TIMESTAMP_RE.sub(_replace, srt_text)
+
 
 def _burn_in_subtitles(video_path, srt_path, output_path):
     """Burn SRT subtitles into the video using ffmpeg subtitles filter.
@@ -207,6 +243,14 @@ class DigitSRTFromVideo:
                     "default": True,
                     "tooltip": "Try to identify and label different speakers.",
                 }),
+                "pad_frames": ("INT", {
+                    "default": 0, "min": 0, "max": 120, "step": 1,
+                    "tooltip": "Extend each subtitle by this many frames on both sides (head and tail).",
+                }),
+                "frame_rate": ("FLOAT", {
+                    "default": 23.976, "min": 1.0, "max": 120.0, "step": 0.001,
+                    "tooltip": "Frame rate of the video. Used to convert pad_frames to seconds.",
+                }),
             },
         }
 
@@ -221,7 +265,7 @@ class DigitSRTFromVideo:
     def transcribe_video(self, video_path, model, subtitle_output, extra_instructions,
                          projekts_root, project, filename,
                          gcp_project_id="", gcp_region="global",
-                         identify_speakers=True):
+                         identify_speakers=True, pad_frames=0, frame_rate=23.976):
 
         from google import genai
 
@@ -245,6 +289,11 @@ class DigitSRTFromVideo:
             user_prompt += f"\n\nAdditional instructions:\n{extra_instructions.strip()}"
 
         srt_text = _transcribe_single(video_path, client, model, system_prompt, user_prompt)
+
+        # Apply frame padding
+        if pad_frames > 0:
+            srt_text = _pad_srt(srt_text, pad_frames, frame_rate)
+            print(f"[DigitSRTFromVideo] Padded subtitles by {pad_frames} frames @ {frame_rate} fps")
 
         # Save SRT
         target_dir = os.path.join(projekts_root, project, "assets", "auto_srt")
@@ -344,6 +393,14 @@ class DigitBatchSRTFromVideo:
                     "default": True,
                     "tooltip": "Try to identify and label different speakers.",
                 }),
+                "pad_frames": ("INT", {
+                    "default": 0, "min": 0, "max": 120, "step": 1,
+                    "tooltip": "Extend each subtitle by this many frames on both sides (head and tail).",
+                }),
+                "frame_rate": ("FLOAT", {
+                    "default": 23.976, "min": 1.0, "max": 120.0, "step": 0.001,
+                    "tooltip": "Frame rate of the video. Used to convert pad_frames to seconds.",
+                }),
                 "delay_seconds": ("FLOAT", {
                     "default": 1.0, "min": 0.0, "max": 30.0, "step": 0.5,
                     "tooltip": "Delay between API calls to avoid rate limiting.",
@@ -371,6 +428,7 @@ class DigitBatchSRTFromVideo:
                          output_mode, overwrite,
                          gcp_project_id="", gcp_region="global",
                          extra_instructions="", identify_speakers=True,
+                         pad_frames=0, frame_rate=23.976,
                          delay_seconds=1.0, projekts_root="", project=""):
 
         from google import genai
@@ -466,6 +524,9 @@ class DigitBatchSRTFromVideo:
 
                 srt_text = _transcribe_single(video_path, client, model,
                                               system_prompt, user_prompt)
+
+                if pad_frames > 0:
+                    srt_text = _pad_srt(srt_text, pad_frames, frame_rate)
 
                 entry_count = len(re.findall(r"^\d+$", srt_text, re.MULTILINE))
                 parts = []
