@@ -97,6 +97,30 @@ def _transcribe_single(video_path, client, model, system_prompt, user_prompt):
     return srt_text
 
 
+SUBTITLE_OUTPUT_MODES = ["srt_only", "burn_in_only", "both"]
+
+
+def _burn_in_subtitles(video_path, srt_path, output_path):
+    """Burn SRT subtitles into the video using ffmpeg subtitles filter.
+
+    Outputs to a new file with _subtitled suffix.
+    """
+    # The subtitles filter needs the SRT path with special chars escaped
+    # Using the subtitles filter with the filename option avoids shell issues
+    escaped_srt = srt_path.replace("'", r"'\''").replace(":", r"\:")
+    cmd = [
+        "ffmpeg", "-y", "-i", video_path,
+        "-vf", f"subtitles='{escaped_srt}'",
+        "-c:a", "copy",
+        output_path,
+    ]
+    print(f"[DigitSRT] Burning subtitles into: {os.path.basename(output_path)}")
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    if result.returncode != 0:
+        raise RuntimeError(f"ffmpeg burn-in failed: {result.stderr.strip()}")
+    return output_path
+
+
 TRANSCRIBE_SYSTEM_PROMPT = """You are a precise audio transcription engine.
 
 Given an audio file extracted from a video, you must:
@@ -157,6 +181,10 @@ class DigitSRTFromVideo:
                     "placeholder": "Path to MP4 / MOV file",
                 }),
                 "model": (cls.MODELS, {"default": "gemini-2.5-flash"}),
+                "subtitle_output": (SUBTITLE_OUTPUT_MODES, {
+                    "default": "srt_only",
+                    "tooltip": "srt_only: SRT sidecar file. burn_in_only: hardcode subs into video. both: SRT file + burned-in video.",
+                }),
                 "extra_instructions": ("STRING", {
                     "default": "",
                     "multiline": True,
@@ -190,7 +218,7 @@ class DigitSRTFromVideo:
     def IS_CHANGED(cls, **kwargs):
         return float("nan")
 
-    def transcribe_video(self, video_path, model, extra_instructions,
+    def transcribe_video(self, video_path, model, subtitle_output, extra_instructions,
                          projekts_root, project, filename,
                          gcp_project_id="", gcp_region="global",
                          identify_speakers=True):
@@ -218,18 +246,38 @@ class DigitSRTFromVideo:
 
         srt_text = _transcribe_single(video_path, client, model, system_prompt, user_prompt)
 
-        # Save
+        # Save SRT
         target_dir = os.path.join(projekts_root, project, "assets", "auto_srt")
         os.makedirs(target_dir, exist_ok=True)
 
         srt_filename = f"{filename}.srt"
         filepath = os.path.join(target_dir, srt_filename)
 
-        with open(filepath, "w", encoding="utf-8") as f:
-            f.write(srt_text)
+        if subtitle_output in ("srt_only", "both"):
+            with open(filepath, "w", encoding="utf-8") as f:
+                f.write(srt_text)
+            entry_count = len(re.findall(r"^\d+$", srt_text, re.MULTILINE))
+            print(f"[DigitSRTFromVideo] Saved {entry_count} entries to: {filepath}")
 
-        entry_count = len(re.findall(r"^\d+$", srt_text, re.MULTILINE))
-        print(f"[DigitSRTFromVideo] Saved {entry_count} entries to: {filepath}")
+        # Burn in
+        if subtitle_output in ("burn_in_only", "both"):
+            # Write temp SRT for burn-in if we didn't save one above
+            if subtitle_output == "burn_in_only":
+                tmp_srt = tempfile.NamedTemporaryFile(suffix=".srt", delete=False, mode="w")
+                tmp_srt.write(srt_text)
+                tmp_srt.close()
+                burn_srt = tmp_srt.name
+            else:
+                burn_srt = filepath
+
+            try:
+                ext = os.path.splitext(video_path)[1]
+                burned_path = os.path.join(target_dir, f"{filename}_subtitled{ext}")
+                _burn_in_subtitles(video_path, burn_srt, burned_path)
+                print(f"[DigitSRTFromVideo] Burned-in video saved to: {burned_path}")
+            finally:
+                if subtitle_output == "burn_in_only" and os.path.isfile(burn_srt):
+                    os.unlink(burn_srt)
 
         return {
             "ui": {"filepath_text": [filepath]},
@@ -263,6 +311,10 @@ class DigitBatchSRTFromVideo:
                 "file_types": (["all", "mp4", "mov", "mxf", "mkv", "avi", "m4v", "qt"], {
                     "default": "all",
                     "tooltip": "Which video file types to process. 'all' includes mp4, mov, qt, m4v, mkv, avi, mxf.",
+                }),
+                "subtitle_output": (SUBTITLE_OUTPUT_MODES, {
+                    "default": "srt_only",
+                    "tooltip": "srt_only: SRT sidecar file. burn_in_only: hardcode subs into video. both: SRT file + burned-in video.",
                 }),
                 "model": (cls.MODELS, {"default": "gemini-2.5-flash"}),
                 "output_mode": (["alongside_video", "projekts_auto_srt"], {
@@ -315,7 +367,8 @@ class DigitBatchSRTFromVideo:
     def IS_CHANGED(cls, **kwargs):
         return float("nan")
 
-    def batch_transcribe(self, video_folder, file_types, model, output_mode, overwrite,
+    def batch_transcribe(self, video_folder, file_types, subtitle_output, model,
+                         output_mode, overwrite,
                          gcp_project_id="", gcp_region="global",
                          extra_instructions="", identify_speakers=True,
                          delay_seconds=1.0, projekts_root="", project=""):
@@ -386,12 +439,27 @@ class DigitBatchSRTFromVideo:
             else:
                 srt_path = os.path.join(out_dir, f"{base_name}.srt")
 
-            # Skip if SRT exists and overwrite is off
-            if os.path.isfile(srt_path) and not overwrite:
-                skipped += 1
-                log_lines.append(f"[{idx + 1}/{total}] {vf} -> SKIPPED (SRT exists)")
-                pbar.update_absolute(idx + 1)
-                continue
+            # Skip if output already exists and overwrite is off
+            if not overwrite:
+                ext = os.path.splitext(video_path)[1]
+                burned_check = os.path.join(
+                    os.path.dirname(srt_path), f"{base_name}_subtitled{ext}")
+                srt_exists = os.path.isfile(srt_path)
+                burned_exists = os.path.isfile(burned_check)
+
+                skip = False
+                if subtitle_output == "srt_only" and srt_exists:
+                    skip = True
+                elif subtitle_output == "burn_in_only" and burned_exists:
+                    skip = True
+                elif subtitle_output == "both" and srt_exists and burned_exists:
+                    skip = True
+
+                if skip:
+                    skipped += 1
+                    log_lines.append(f"[{idx + 1}/{total}] {vf} -> SKIPPED (exists)")
+                    pbar.update_absolute(idx + 1)
+                    continue
 
             try:
                 print(f"[DigitBatchSRT] [{idx + 1}/{total}] Processing: {vf}")
@@ -399,12 +467,40 @@ class DigitBatchSRTFromVideo:
                 srt_text = _transcribe_single(video_path, client, model,
                                               system_prompt, user_prompt)
 
-                with open(srt_path, "w", encoding="utf-8") as f:
-                    f.write(srt_text)
-
                 entry_count = len(re.findall(r"^\d+$", srt_text, re.MULTILINE))
+                parts = []
+
+                # Write SRT sidecar
+                if subtitle_output in ("srt_only", "both"):
+                    with open(srt_path, "w", encoding="utf-8") as f:
+                        f.write(srt_text)
+                    parts.append(f"{entry_count} entries")
+
+                # Burn in subtitles
+                if subtitle_output in ("burn_in_only", "both"):
+                    # Write temp SRT if we didn't save a sidecar
+                    if subtitle_output == "burn_in_only":
+                        tmp_srt = tempfile.NamedTemporaryFile(
+                            suffix=".srt", delete=False, mode="w")
+                        tmp_srt.write(srt_text)
+                        tmp_srt.close()
+                        burn_srt = tmp_srt.name
+                    else:
+                        burn_srt = srt_path
+
+                    try:
+                        ext = os.path.splitext(video_path)[1]
+                        burned_dir = os.path.dirname(srt_path)
+                        burned_path = os.path.join(
+                            burned_dir, f"{base_name}_subtitled{ext}")
+                        _burn_in_subtitles(video_path, burn_srt, burned_path)
+                        parts.append("burned in")
+                    finally:
+                        if subtitle_output == "burn_in_only" and os.path.isfile(burn_srt):
+                            os.unlink(burn_srt)
+
                 transcribed += 1
-                status = f"[{idx + 1}/{total}] {vf} -> OK ({entry_count} entries)"
+                status = f"[{idx + 1}/{total}] {vf} -> OK ({', '.join(parts)})"
                 log_lines.append(status)
                 logger.info("DigitBatchSRT: %s", status)
 
