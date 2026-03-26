@@ -6,6 +6,7 @@ from .veo_video_node import DigitVeoVideo
 from .video_saver_node import DigitVideoSaver
 from .drag_crop_node import DigitDragCrop, DigitCropInfo
 from .srt_maker_node import DigitSRTMaker
+from .srt_from_video_node import DigitSRTFromVideo, DigitBatchSRTFromVideo
 from .random_prompt_node import DigitRandomPrompt
 from .lora_loader_node import DigitLoraLoader, DigitLoraLoaderModelOnly
 from .prompt_combine_node import DigitPromptCombine
@@ -41,6 +42,8 @@ NODE_CLASS_MAPPINGS = {
     "DigitDragCrop": DigitDragCrop,
     "DigitCropInfo": DigitCropInfo,
     "DigitSRTMaker": DigitSRTMaker,
+    "DigitSRTFromVideo": DigitSRTFromVideo,
+    "DigitBatchSRTFromVideo": DigitBatchSRTFromVideo,
     "DigitRandomPrompt": DigitRandomPrompt,
     "DigitLoraLoader": DigitLoraLoader,
     "DigitLoraLoaderModelOnly": DigitLoraLoaderModelOnly,
@@ -82,6 +85,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "DigitDragCrop": "DIGIT Drag Crop",
     "DigitCropInfo": "DIGIT Crop Info",
     "DigitSRTMaker": "DIGIT SRT Maker",
+    "DigitSRTFromVideo": "DIGIT SRT From Video",
+    "DigitBatchSRTFromVideo": "DIGIT Batch SRT From Video",
     "DigitRandomPrompt": "DIGIT Random Prompt",
     "DigitLoraLoader": "DIGIT LoRA Loader",
     "DigitLoraLoaderModelOnly": "DIGIT LoRA Loader (Model Only)",
