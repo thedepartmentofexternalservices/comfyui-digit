@@ -326,6 +326,35 @@ class DigitBatchGeminiImage:
         print(f"  prompt: {prompt[:80]!r}")
         print(f"  variations_per_image: {variations_per_image}")
 
+        try:
+            return self._generate_batch_inner(
+                genai, types,
+                image_folder, prompt, variations_per_image, image_model, llm_model,
+                aspect_ratio, resolution, temperature, variation_temperature,
+                gcp_project_id, gcp_region, output_subfolder, system_instruction,
+                variation_system_prompt, variation_instruction, use_source_image,
+                seed, max_dimension, delay_seconds,
+                harassment_threshold, hate_speech_threshold,
+                sexually_explicit_threshold, dangerous_content_threshold,
+            )
+        except Exception as e:
+            logger.error("=== DIGIT Batch Gemini Image FATAL ERROR ===")
+            logger.error("  %s: %s", type(e).__name__, e)
+            import traceback
+            traceback.print_exc()
+            raise
+
+    def _generate_batch_inner(
+        self,
+        genai, types,
+        image_folder, prompt, variations_per_image, image_model, llm_model,
+        aspect_ratio, resolution, temperature, variation_temperature,
+        gcp_project_id, gcp_region, output_subfolder, system_instruction,
+        variation_system_prompt, variation_instruction, use_source_image,
+        seed, max_dimension, delay_seconds,
+        harassment_threshold, hate_speech_threshold,
+        sexually_explicit_threshold, dangerous_content_threshold,
+    ):
         # Validate
         image_folder = image_folder.strip()
         if not os.path.isdir(image_folder):
