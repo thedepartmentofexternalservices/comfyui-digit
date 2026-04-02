@@ -184,11 +184,7 @@ class DigitBatchGeminiImage:
                     "multiline": True,
                     "tooltip": "Extra instructions appended to the variation request. E.g. 'Keep it photorealistic' or 'Vary the lighting dramatically'.",
                 }),
-                "use_source_image": ("BOOLEAN", {
-                    "default": True,
-                    "tooltip": "Send the source image to Gemini alongside the prompt. Disable to use prompt-only generation.",
-                }),
-                "seed": ("INT", {
+"seed": ("INT", {
                     "default": 0,
                     "min": 0,
                     "max": 2147483647,
@@ -306,7 +302,6 @@ class DigitBatchGeminiImage:
         system_instruction="",
         variation_system_prompt="",
         variation_instruction="",
-        use_source_image=True,
         seed=0,
         max_dimension=2048,
         delay_seconds=1.0,
@@ -335,7 +330,7 @@ class DigitBatchGeminiImage:
                 image_folder, prompt, variations_per_image, image_model, llm_model,
                 aspect_ratio, resolution, temperature, variation_temperature,
                 gcp_project_id, gcp_region, output_subfolder, system_instruction,
-                variation_system_prompt, variation_instruction, use_source_image,
+                variation_system_prompt, variation_instruction,
                 seed, max_dimension, delay_seconds,
                 harassment_threshold, hate_speech_threshold,
                 sexually_explicit_threshold, dangerous_content_threshold,
@@ -357,7 +352,7 @@ class DigitBatchGeminiImage:
         image_folder, prompt, variations_per_image, image_model, llm_model,
         aspect_ratio, resolution, temperature, variation_temperature,
         gcp_project_id, gcp_region, output_subfolder, system_instruction,
-        variation_system_prompt, variation_instruction, use_source_image,
+        variation_system_prompt, variation_instruction,
         seed, max_dimension, delay_seconds,
         harassment_threshold, hate_speech_threshold,
         sexually_explicit_threshold, dangerous_content_threshold,
@@ -383,12 +378,17 @@ class DigitBatchGeminiImage:
         output_dir = os.path.join(image_folder, output_subfolder.strip() or "gemini_output")
         os.makedirs(output_dir, exist_ok=True)
 
-        # Find source images
-        image_files = sorted([
-            f for f in os.listdir(image_folder)
-            if os.path.isfile(os.path.join(image_folder, f))
-            and os.path.splitext(f)[1].lower() in IMAGE_EXTENSIONS
-        ])
+        # Find source images (recursive walk through subfolders)
+        image_files = []
+        for root, _dirs, files in os.walk(image_folder):
+            # Skip the output subfolder
+            if os.path.abspath(root).startswith(os.path.abspath(output_dir)):
+                continue
+            for f in files:
+                if os.path.splitext(f)[1].lower() in IMAGE_EXTENSIONS:
+                    image_files.append(os.path.join(root, f))
+        image_files.sort()
+        print(f"  >> Found {len(image_files)} images in {image_folder!r}")
 
         if not image_files:
             blank = torch.zeros((1, 512, 512, 3))
@@ -411,18 +411,17 @@ class DigitBatchGeminiImage:
         errors = 0
         op_idx = 0
 
-        for img_idx, img_file in enumerate(image_files):
-            img_path = os.path.join(image_folder, img_file)
-            base_name = os.path.splitext(img_file)[0]
+        for img_idx, img_path in enumerate(image_files):
+            img_name = os.path.basename(img_path)
+            base_name = os.path.splitext(img_name)[0]
 
-            # Load source image bytes if needed
+            # Load source image bytes
             source_png_bytes = None
-            if use_source_image:
-                try:
-                    source_png_bytes = _image_file_to_png_bytes(img_path, max_dimension)
-                except Exception as e:
-                    log_lines.append(f"[{img_file}] ERROR loading image: {e}")
-                    logger.error("Failed to load %s: %s", img_file, e)
+            try:
+                source_png_bytes = _image_file_to_png_bytes(img_path, max_dimension)
+            except Exception as e:
+                log_lines.append(f"[{img_name}] ERROR loading image: {e}")
+                logger.error("Failed to load %s: %s", img_name, e)
                     errors += variations_per_image
                     op_idx += variations_per_image
                     pbar.update_absolute(op_idx)
@@ -438,7 +437,7 @@ class DigitBatchGeminiImage:
                         varied_prompt = self._vary_prompt(
                             client, llm_model, prompt, var_idx,
                             variation_system_prompt, variation_instruction,
-                            variation_temperature, img_file,
+                            variation_temperature, img_name,
                         )
 
                     # Step 2: Build image generation request
@@ -487,7 +486,7 @@ class DigitBatchGeminiImage:
 
                                         generated += 1
                                         saved = True
-                                        status = f"[{op_idx}/{total_ops}] {img_file} v{var_idx + 1} -> {out_name}"
+                                        status = f"[{op_idx}/{total_ops}] {img_name} v{var_idx + 1} -> {out_name}"
                                         log_lines.append(status)
                                         logger.info("Batch Gemini Image: %s", status)
                                         break
@@ -496,13 +495,13 @@ class DigitBatchGeminiImage:
 
                     if not saved:
                         errors += 1
-                        status = f"[{op_idx}/{total_ops}] {img_file} v{var_idx + 1} -> NO IMAGE returned"
+                        status = f"[{op_idx}/{total_ops}] {img_name} v{var_idx + 1} -> NO IMAGE returned"
                         log_lines.append(status)
                         logger.warning("Batch Gemini Image: %s", status)
 
                 except Exception as e:
                     errors += 1
-                    status = f"[{op_idx}/{total_ops}] {img_file} v{var_idx + 1} -> ERROR: {e}"
+                    status = f"[{op_idx}/{total_ops}] {img_name} v{var_idx + 1} -> ERROR: {e}"
                     log_lines.append(status)
                     logger.error("Batch Gemini Image: %s", status)
 
