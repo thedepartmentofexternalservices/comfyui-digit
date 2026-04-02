@@ -422,10 +422,10 @@ class DigitBatchGeminiImage:
             except Exception as e:
                 log_lines.append(f"[{img_name}] ERROR loading image: {e}")
                 logger.error("Failed to load %s: %s", img_name, e)
-                    errors += variations_per_image
-                    op_idx += variations_per_image
-                    pbar.update_absolute(op_idx)
-                    continue
+                errors += variations_per_image
+                op_idx += variations_per_image
+                pbar.update_absolute(op_idx)
+                continue
 
             for var_idx in range(variations_per_image):
                 op_idx += 1
