@@ -318,6 +318,14 @@ class DigitBatchGeminiImage:
         from google import genai
         from google.genai import types
 
+        logger.warning("=== DIGIT Batch Gemini Image: generate_batch called ===")
+        logger.warning("  image_folder=%r, prompt=%r, variations=%d, image_model=%s, llm_model=%s",
+                        image_folder, prompt[:80], variations_per_image, image_model, llm_model)
+        print(f"\n=== DIGIT Batch Gemini Image START ===")
+        print(f"  folder: {image_folder!r}")
+        print(f"  prompt: {prompt[:80]!r}")
+        print(f"  variations_per_image: {variations_per_image}")
+
         # Validate
         image_folder = image_folder.strip()
         if not os.path.isdir(image_folder):
