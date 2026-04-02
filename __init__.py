@@ -11,6 +11,7 @@ from .random_prompt_node import DigitRandomPrompt
 from .lora_loader_node import DigitLoraLoader, DigitLoraLoaderModelOnly
 from .prompt_combine_node import DigitPromptCombine
 from .batch_caption_node import DigitBatchCaption
+from .batch_gemini_image_node import DigitBatchGeminiImage
 from .text_encode_node import DigitTextEncode
 from .dataset_prep_node import DigitDatasetPrep
 from .caption_viewer_node import DigitCaptionViewer
@@ -51,6 +52,7 @@ NODE_CLASS_MAPPINGS = {
     "DigitLoraLoaderModelOnly": DigitLoraLoaderModelOnly,
     "DigitPromptCombine": DigitPromptCombine,
     "DigitBatchCaption": DigitBatchCaption,
+    "DigitBatchGeminiImage": DigitBatchGeminiImage,
     "DigitTextEncode": DigitTextEncode,
     "DigitDatasetPrep": DigitDatasetPrep,
     "DigitCaptionViewer": DigitCaptionViewer,
@@ -96,6 +98,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "DigitLoraLoaderModelOnly": "DIGIT LoRA Loader (Model Only)",
     "DigitPromptCombine": "DIGIT Prompt Combine",
     "DigitBatchCaption": "DIGIT Batch Caption",
+    "DigitBatchGeminiImage": "DIGIT Batch Gemini Image",
     "DigitTextEncode": "DIGIT Text Encode",
     "DigitDatasetPrep": "DIGIT Dataset Prep",
     "DigitCaptionViewer": "DIGIT Caption Viewer",
