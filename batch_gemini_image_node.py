@@ -326,8 +326,11 @@ class DigitBatchGeminiImage:
         print(f"  prompt: {prompt[:80]!r}")
         print(f"  variations_per_image: {variations_per_image}")
 
+        print("  >> entering try block...")
+        import sys
+        sys.stdout.flush()
         try:
-            return self._generate_batch_inner(
+            result = self._generate_batch_inner(
                 genai, types,
                 image_folder, prompt, variations_per_image, image_model, llm_model,
                 aspect_ratio, resolution, temperature, variation_temperature,
@@ -337,11 +340,15 @@ class DigitBatchGeminiImage:
                 harassment_threshold, hate_speech_threshold,
                 sexually_explicit_threshold, dangerous_content_threshold,
             )
+            print("  >> _generate_batch_inner returned successfully")
+            sys.stdout.flush()
+            return result
         except Exception as e:
-            logger.error("=== DIGIT Batch Gemini Image FATAL ERROR ===")
-            logger.error("  %s: %s", type(e).__name__, e)
+            print(f"\n!!! DIGIT Batch Gemini Image FATAL ERROR !!!")
+            print(f"  {type(e).__name__}: {e}")
             import traceback
-            traceback.print_exc()
+            traceback.print_exc(file=sys.stdout)
+            sys.stdout.flush()
             raise
 
     def _generate_batch_inner(
@@ -355,8 +362,10 @@ class DigitBatchGeminiImage:
         harassment_threshold, hate_speech_threshold,
         sexually_explicit_threshold, dangerous_content_threshold,
     ):
+        print("  >> inside _generate_batch_inner")
         # Validate
         image_folder = image_folder.strip()
+        print(f"  >> os.path.isdir({image_folder!r}) = {os.path.isdir(image_folder)}")
         if not os.path.isdir(image_folder):
             raise ValueError(f"Image folder not found: {image_folder}")
         if not prompt.strip():
