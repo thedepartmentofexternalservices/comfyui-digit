@@ -105,8 +105,8 @@ class DigitBatchGeminiImage:
     RESOLUTIONS = ["1K", "2K", "4K"]
 
     CATEGORY = "DIGIT"
-    RETURN_TYPES = ("STRING", "INT", "STRING")
-    RETURN_NAMES = ("log", "generated_count", "output_folder")
+    RETURN_TYPES = ("IMAGE", "STRING", "INT", "STRING")
+    RETURN_NAMES = ("images", "log", "generated_count", "output_folder")
     FUNCTION = "generate_batch"
     OUTPUT_NODE = True
     DESCRIPTION = (
@@ -353,8 +353,12 @@ class DigitBatchGeminiImage:
         ])
 
         if not image_files:
+            blank = torch.zeros((1, 512, 512, 3))
             return {"ui": {"log_text": ["No images found in folder."]},
-                    "result": ("No images found.", 0, output_dir)}
+                    "result": (blank, "No images found.", 0, output_dir)}
+
+        # Collect generated image tensors for preview output
+        output_tensors = []
 
         total_ops = len(image_files) * variations_per_image
         pbar = comfy.utils.ProgressBar(total_ops)
@@ -433,6 +437,7 @@ class DigitBatchGeminiImage:
                                 for part in candidate.content.parts:
                                     if part.inline_data and part.inline_data.mime_type and "image" in part.inline_data.mime_type:
                                         tensor = _png_bytes_to_tensor(part.inline_data.data)
+                                        output_tensors.append(tensor)
                                         out_name = f"{base_name}_v{var_idx + 1:03d}.png"
                                         out_path = os.path.join(output_dir, out_name)
                                         _save_image_tensor(tensor[0], out_path)
@@ -481,5 +486,21 @@ class DigitBatchGeminiImage:
 
         logger.info("Batch Gemini Image: %s", summary)
 
+        # Build image batch tensor — resize all to match first image dimensions
+        if output_tensors:
+            # All tensors are (1,H,W,3) — resize to common dimensions for batching
+            target_h, target_w = output_tensors[0].shape[1], output_tensors[0].shape[2]
+            resized = []
+            for t in output_tensors:
+                if t.shape[1] != target_h or t.shape[2] != target_w:
+                    # Resize via PIL
+                    img_np = (t[0].cpu().numpy() * 255).clip(0, 255).astype(np.uint8)
+                    img = Image.fromarray(img_np).resize((target_w, target_h), Image.LANCZOS)
+                    t = torch.from_numpy(np.array(img).astype(np.float32) / 255.0).unsqueeze(0)
+                resized.append(t)
+            image_batch = torch.cat(resized, dim=0)
+        else:
+            image_batch = torch.zeros((1, 512, 512, 3))
+
         return {"ui": {"log_text": [summary]},
-                "result": (log_text, generated, output_dir)}
+                "result": (image_batch, log_text, generated, output_dir)}
