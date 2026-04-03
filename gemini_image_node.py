@@ -53,8 +53,8 @@ def _png_bytes_to_tensor(png_bytes):
 
 class DigitGeminiImage:
     MODELS = [
-        "gemini-3.1-flash-image-preview",
         "gemini-3-pro-image-preview",
+        "gemini-3.1-flash-image-preview",
         "gemini-2.5-flash-image",
         "gemini-2.5-flash",
     ]
@@ -178,6 +178,11 @@ class DigitGeminiImage:
             sexually_explicit_threshold, dangerous_content_threshold,
         )
 
+        # image_size is only supported on Pro models, not Flash
+        image_cfg_kwargs = {"aspect_ratio": aspect_ratio}
+        if "pro" in model.lower():
+            image_cfg_kwargs["image_size"] = resolution
+
         config = types.GenerateContentConfig(
             temperature=temperature,
             top_p=top_p,
@@ -185,10 +190,7 @@ class DigitGeminiImage:
             seed=effective_seed if seed > 0 else None,
             max_output_tokens=32768,
             response_modalities=["TEXT", "IMAGE"],
-            image_config=types.ImageConfig(
-                aspect_ratio=aspect_ratio,
-                image_size=resolution,
-            ),
+            image_config=types.ImageConfig(**image_cfg_kwargs),
             system_instruction=system_instruction.strip() or None,
             safety_settings=safety_settings,
         )

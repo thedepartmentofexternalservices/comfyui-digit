@@ -457,7 +457,7 @@ class DigitBatchGeminiImage:
                         response_modalities=["TEXT", "IMAGE"],
                         image_config=types.ImageConfig(
                             aspect_ratio=aspect_ratio,
-                            image_size=resolution,
+                            **({"image_size": resolution} if "pro" in image_model.lower() else {}),
                         ),
                         system_instruction=system_instruction.strip() or None,
                         safety_settings=safety_settings,
