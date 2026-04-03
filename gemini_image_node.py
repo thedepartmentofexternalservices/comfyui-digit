@@ -179,10 +179,6 @@ class DigitGeminiImage:
         body = {
             "contents": [{"role": "user", "parts": parts}],
             "generationConfig": {
-                "temperature": temperature,
-                "topP": top_p,
-                "topK": top_k,
-                "maxOutputTokens": 32768,
                 "responseModalities": ["TEXT", "IMAGE"],
                 "imageConfig": image_config,
                 "thinkingConfig": {"thinkingLevel": thinking_level},
