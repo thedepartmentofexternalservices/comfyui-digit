@@ -198,8 +198,37 @@ class DigitGeminiImage:
                         model, resolution, thinking_level, aspect_ratio)
         logger.warning("DIGIT Gemini Image URL: %s", url)
 
+        # Log the full request body (minus image data) for debugging
+        import json as _json
+        debug_body = _json.loads(_json.dumps(body))
+        for content in debug_body.get("contents", []):
+            for part in content.get("parts", []):
+                if "inlineData" in part:
+                    part["inlineData"]["data"] = f"<{len(part['inlineData']['data'])} chars>"
+        logger.warning("DIGIT Gemini Image request body: %s", _json.dumps(debug_body, indent=2))
+
         # Generate with retry
         response_data = self._call_with_retry(url, token, body)
+
+        # Log response metadata (not image data)
+        debug_resp = {}
+        if "usageMetadata" in response_data:
+            debug_resp["usageMetadata"] = response_data["usageMetadata"]
+        if "modelVersion" in response_data:
+            debug_resp["modelVersion"] = response_data["modelVersion"]
+        if "candidates" in response_data:
+            debug_resp["candidateCount"] = len(response_data["candidates"])
+            for ci, cand in enumerate(response_data["candidates"]):
+                parts_summary = []
+                for p in cand.get("content", {}).get("parts", []):
+                    if "inlineData" in p:
+                        parts_summary.append(f"image/{p['inlineData'].get('mimeType', '?')}")
+                    elif "text" in p:
+                        parts_summary.append(f"text({len(p['text'])} chars)")
+                    elif "thought" in p:
+                        parts_summary.append(f"thought({len(p.get('thought',''))} chars)")
+                debug_resp[f"candidate_{ci}_parts"] = parts_summary
+        logger.warning("DIGIT Gemini Image response metadata: %s", _json.dumps(debug_resp, indent=2))
 
         # Parse response
         image_tensors = []
