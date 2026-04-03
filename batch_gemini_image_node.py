@@ -447,8 +447,9 @@ class DigitBatchGeminiImage:
                     # Step 3: Generate via direct REST API
                     response_data = self._call_image_api(image_url, token, body)
 
-                    # Step 4: Extract and save output image
+                    # Step 4: Extract and save output image (pick largest — HIGH thinking returns 1K draft + 4K final)
                     saved = False
+                    response_images = []
                     if "candidates" in response_data:
                         for candidate in response_data["candidates"]:
                             content = candidate.get("content", {})
@@ -458,23 +459,24 @@ class DigitBatchGeminiImage:
                                     if "image" in mime:
                                         img_bytes = base64.b64decode(part["inlineData"]["data"])
                                         tensor = _png_bytes_to_tensor(img_bytes)
-                                        output_tensors.append(tensor)
-                                        out_name = f"{base_name}_v{var_idx + 1:03d}.png"
-                                        out_path = os.path.join(output_dir, out_name)
-                                        _save_image_tensor(tensor[0], out_path)
+                                        response_images.append(tensor)
 
-                                        prompt_path = os.path.join(output_dir, f"{base_name}_v{var_idx + 1:03d}.txt")
-                                        with open(prompt_path, "w", encoding="utf-8") as f:
-                                            f.write(varied_prompt)
+                    if response_images:
+                        tensor = max(response_images, key=lambda t: t.shape[1] * t.shape[2])
+                        output_tensors.append(tensor)
+                        out_name = f"{base_name}_v{var_idx + 1:03d}.png"
+                        out_path = os.path.join(output_dir, out_name)
+                        _save_image_tensor(tensor[0], out_path)
 
-                                        generated += 1
-                                        saved = True
-                                        status = f"[{op_idx}/{total_ops}] {img_name} v{var_idx + 1} -> {out_name}"
-                                        log_lines.append(status)
-                                        logger.info("Batch Gemini Image: %s", status)
-                                        break
-                            if saved:
-                                break
+                        prompt_path = os.path.join(output_dir, f"{base_name}_v{var_idx + 1:03d}.txt")
+                        with open(prompt_path, "w", encoding="utf-8") as f:
+                            f.write(varied_prompt)
+
+                        generated += 1
+                        saved = True
+                        status = f"[{op_idx}/{total_ops}] {img_name} v{var_idx + 1} -> {out_name}"
+                        log_lines.append(status)
+                        logger.info("Batch Gemini Image: %s", status)
 
                     if not saved:
                         errors += 1
