@@ -199,6 +199,10 @@ class DigitGeminiImage:
             safety_settings=safety_settings,
         )
 
+        # Log the config being sent
+        logger.warning("DIGIT Gemini Image config: model=%s, image_size=%s, thinking_level=%s, aspect_ratio=%s",
+                        model, resolution, thinking_level, aspect_ratio)
+
         # Generate with retry
         response = self._generate_with_retry(client, model, parts, config)
 
@@ -223,6 +227,8 @@ class DigitGeminiImage:
 
         # Use first image only — multiple images may have different dimensions
         output_image = image_tensors[0]
+        logger.warning("DIGIT Gemini Image output: shape=%s (H=%d, W=%d)",
+                        output_image.shape, output_image.shape[1], output_image.shape[2])
         output_text = "\n".join(text_parts)
 
         return (output_image, output_text)
