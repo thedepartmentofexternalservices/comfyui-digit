@@ -1,13 +1,15 @@
+import base64
 import io
 import logging
 import random
 import time
 
 import numpy as np
+import requests as http_requests
 import torch
 from PIL import Image
 
-from .gcp_config import resolve_gcp_config, default_project, default_region
+from .gcp_config import resolve_gcp_config, get_gcp_access_token, build_vertex_url, default_project, default_region
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +33,14 @@ HARM_CATEGORIES = [
     "HARM_CATEGORY_SEXUALLY_EXPLICIT",
     "HARM_CATEGORY_DANGEROUS_CONTENT",
     "HARM_CATEGORY_CIVIC_INTEGRITY",
+]
+
+# Image-specific safety categories (used by Nano Banana 2 / Google's nodes)
+IMAGE_HARM_CATEGORIES = [
+    "HARM_CATEGORY_IMAGE_HATE",
+    "HARM_CATEGORY_IMAGE_DANGEROUS_CONTENT",
+    "HARM_CATEGORY_IMAGE_HARASSMENT",
+    "HARM_CATEGORY_IMAGE_SEXUALLY_EXPLICIT",
 ]
 
 
@@ -108,21 +118,18 @@ class DigitGeminiImage:
             return float("nan")
         return seed
 
-    def _build_safety_settings(self, types, harassment, hate_speech, sexually_explicit, dangerous_content):
-        """Build safety settings for all 8 harm categories."""
-        threshold_map = {
-            "HARM_CATEGORY_HARASSMENT": harassment,
-            "HARM_CATEGORY_HATE_SPEECH": hate_speech,
-            "HARM_CATEGORY_SEXUALLY_EXPLICIT": sexually_explicit,
-            "HARM_CATEGORY_DANGEROUS_CONTENT": dangerous_content,
-        }
-        settings = []
-        for category in HARM_CATEGORIES:
-            threshold = threshold_map.get(category, harassment)
-            settings.append(types.SafetySetting(
-                category=category,
-                threshold=threshold,
-            ))
+    def _build_safety_settings(self, harassment, hate_speech, sexually_explicit, dangerous_content):
+        """Build safety settings matching Nano Banana 2 format (text + image categories)."""
+        settings = [
+            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": hate_speech},
+            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": dangerous_content},
+            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": sexually_explicit},
+            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": harassment},
+            {"category": "HARM_CATEGORY_IMAGE_HATE", "threshold": hate_speech},
+            {"category": "HARM_CATEGORY_IMAGE_DANGEROUS_CONTENT", "threshold": dangerous_content},
+            {"category": "HARM_CATEGORY_IMAGE_HARASSMENT", "threshold": harassment},
+            {"category": "HARM_CATEGORY_IMAGE_SEXUALLY_EXPLICIT", "threshold": sexually_explicit},
+        ]
         return settings
 
     def generate(
@@ -147,85 +154,78 @@ class DigitGeminiImage:
         gcp_project_id="",
         gcp_region="global",
     ):
-        from google import genai
-        from google.genai import types
-
         if not prompt:
             raise ValueError("Prompt is required")
 
         project, region = resolve_gcp_config(gcp_project_id, gcp_region)
+        token = get_gcp_access_token()
 
-        client = genai.Client(
-            vertexai=True,
-            project=project,
-            location=region,
-        )
+        # Build content parts — text first, then images (matching Nano Banana 2 order)
+        parts = [{"text": prompt}]
 
-        # Build content parts
-        parts = []
-
-        # Add input images
         for img_tensor in [image1, image2, image3]:
             if img_tensor is not None:
                 for i in range(img_tensor.shape[0]):
                     png_bytes = _image_tensor_to_png_bytes(img_tensor[i])
-                    parts.append(types.Part.from_bytes(data=png_bytes, mime_type="image/png"))
+                    b64 = base64.b64encode(png_bytes).decode("utf-8")
+                    parts.append({"inlineData": {"mimeType": "image/png", "data": b64}})
 
-        # Add text prompt
-        parts.append(types.Part.from_text(text=prompt))
-
-        # Build config
-        effective_seed = seed if seed > 0 else random.randint(1, 2147483647)
-
-        safety_settings = self._build_safety_settings(
-            types, harassment_threshold, hate_speech_threshold,
-            sexually_explicit_threshold, dangerous_content_threshold,
-        )
-
-        image_cfg_kwargs = {"image_size": resolution}
+        # Build imageConfig — matching Nano Banana 2 exactly
+        image_config = {"imageSize": resolution}
         if aspect_ratio != "auto":
-            image_cfg_kwargs["aspect_ratio"] = aspect_ratio
+            image_config["aspectRatio"] = aspect_ratio
 
-        config = types.GenerateContentConfig(
-            temperature=temperature,
-            top_p=top_p,
-            top_k=top_k,
-            seed=effective_seed if seed > 0 else None,
-            max_output_tokens=32768,
-            response_modalities=["TEXT", "IMAGE"],
-            image_config=types.ImageConfig(**image_cfg_kwargs),
-            thinking_config=types.ThinkingConfig(thinking_level=thinking_level),
-            system_instruction=system_instruction.strip() or None,
-            safety_settings=safety_settings,
-        )
+        # Build request body — matching Nano Banana 2 structure
+        body = {
+            "contents": [{"role": "user", "parts": parts}],
+            "generationConfig": {
+                "temperature": temperature,
+                "topP": top_p,
+                "topK": top_k,
+                "maxOutputTokens": 32768,
+                "responseModalities": ["TEXT", "IMAGE"],
+                "imageConfig": image_config,
+                "thinkingConfig": {"thinkingLevel": thinking_level},
+            },
+            "safetySettings": self._build_safety_settings(
+                harassment_threshold, hate_speech_threshold,
+                sexually_explicit_threshold, dangerous_content_threshold,
+            ),
+        }
 
-        # Log the config being sent
-        logger.warning("DIGIT Gemini Image config: model=%s, image_size=%s, thinking_level=%s, aspect_ratio=%s",
+        if system_instruction and system_instruction.strip():
+            body["systemInstruction"] = {"parts": [{"text": system_instruction.strip()}]}
+
+        url = build_vertex_url(project, region, model)
+
+        logger.warning("DIGIT Gemini Image config: model=%s, imageSize=%s, thinkingLevel=%s, aspect_ratio=%s",
                         model, resolution, thinking_level, aspect_ratio)
+        logger.warning("DIGIT Gemini Image URL: %s", url)
 
         # Generate with retry
-        response = self._generate_with_retry(client, model, parts, config)
+        response_data = self._call_with_retry(url, token, body)
 
         # Parse response
         image_tensors = []
         text_parts = []
 
-        if response.candidates:
-            for candidate in response.candidates:
-                if candidate.content and candidate.content.parts:
-                    for part in candidate.content.parts:
-                        if part.inline_data and part.inline_data.mime_type and "image" in part.inline_data.mime_type:
-                            tensor = _png_bytes_to_tensor(part.inline_data.data)
+        if "candidates" in response_data:
+            for candidate in response_data["candidates"]:
+                content = candidate.get("content", {})
+                for part in content.get("parts", []):
+                    if "inlineData" in part:
+                        mime = part["inlineData"].get("mimeType", "")
+                        if "image" in mime:
+                            img_bytes = base64.b64decode(part["inlineData"]["data"])
+                            tensor = _png_bytes_to_tensor(img_bytes)
                             image_tensors.append(tensor)
-                        elif part.text:
-                            text_parts.append(part.text)
+                    elif "text" in part:
+                        text_parts.append(part["text"])
 
         if not image_tensors:
-            # Return a blank 1024x1024 RGB image as fallback
             logger.warning("Gemini returned no images. Returning blank fallback.")
             image_tensors.append(torch.zeros((1, 1024, 1024, 3)))
 
-        # Use first image only — multiple images may have different dimensions
         output_image = image_tensors[0]
         logger.warning("DIGIT Gemini Image output: shape=%s (H=%d, W=%d)",
                         output_image.shape, output_image.shape[1], output_image.shape[2])
@@ -233,22 +233,34 @@ class DigitGeminiImage:
 
         return (output_image, output_text)
 
-    def _generate_with_retry(self, client, model, parts, config, max_retries=3, base_delay=5.0):
-        """Call generate_content with exponential backoff on 429/503."""
+    def _call_with_retry(self, url, token, body, max_retries=3, base_delay=5.0):
+        """POST to Vertex AI with exponential backoff on rate limits."""
         last_error = None
         for attempt in range(max_retries):
             try:
-                return client.models.generate_content(
-                    model=model,
-                    contents=parts,
-                    config=config,
+                resp = http_requests.post(
+                    url,
+                    headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+                    json=body,
+                    timeout=300,
                 )
+                if resp.status_code in (429, 503):
+                    delay = base_delay * (2 ** attempt)
+                    logger.warning("Rate limited (HTTP %d, attempt %d/%d), retrying in %ds...",
+                                   resp.status_code, attempt + 1, max_retries, delay)
+                    time.sleep(delay)
+                    continue
+                resp.raise_for_status()
+                return resp.json()
+            except http_requests.exceptions.HTTPError:
+                raise
             except Exception as e:
                 last_error = e
                 error_str = str(e)
                 if "429" in error_str or "503" in error_str or "RESOURCE_EXHAUSTED" in error_str:
                     delay = base_delay * (2 ** attempt)
-                    logger.warning(f"Gemini API rate limited (attempt {attempt + 1}/{max_retries}), retrying in {delay}s: {e}")
+                    logger.warning("Rate limited (attempt %d/%d), retrying in %ds: %s",
+                                   attempt + 1, max_retries, delay, e)
                     time.sleep(delay)
                 else:
                     raise
