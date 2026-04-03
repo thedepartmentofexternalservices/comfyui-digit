@@ -1,5 +1,6 @@
 """DIGIT Batch Gemini Image — run Gemini image generation across a folder with LLM-driven prompt variation."""
 
+import base64
 import io
 import logging
 import os
@@ -8,10 +9,11 @@ import time
 
 import comfy.utils
 import numpy as np
+import requests as http_requests
 import torch
 from PIL import Image
 
-from .gcp_config import resolve_gcp_config, default_project, default_region
+from .gcp_config import resolve_gcp_config, get_gcp_access_token, build_vertex_url, default_project, default_region
 
 logger = logging.getLogger(__name__)
 
@@ -38,12 +40,11 @@ SAFETY_THRESHOLD_OPTIONS = [
     "BLOCK_LOW_AND_ABOVE",
 ]
 
-HARM_CATEGORIES = [
-    "HARM_CATEGORY_HARASSMENT",
-    "HARM_CATEGORY_HATE_SPEECH",
-    "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-    "HARM_CATEGORY_DANGEROUS_CONTENT",
-    "HARM_CATEGORY_CIVIC_INTEGRITY",
+IMAGE_HARM_CATEGORIES = [
+    "HARM_CATEGORY_IMAGE_HATE",
+    "HARM_CATEGORY_IMAGE_DANGEROUS_CONTENT",
+    "HARM_CATEGORY_IMAGE_HARASSMENT",
+    "HARM_CATEGORY_IMAGE_SEXUALLY_EXPLICIT",
 ]
 
 
@@ -190,7 +191,7 @@ class DigitBatchGeminiImage:
                     "multiline": True,
                     "tooltip": "Extra instructions appended to the variation request. E.g. 'Keep it photorealistic' or 'Vary the lighting dramatically'.",
                 }),
-"seed": ("INT", {
+                "seed": ("INT", {
                     "default": 0,
                     "min": 0,
                     "max": 2147483647,
@@ -221,28 +222,23 @@ class DigitBatchGeminiImage:
     def IS_CHANGED(cls, **kwargs):
         return float("nan")
 
-    def _build_safety_settings(self, types, harassment, hate_speech, sexually_explicit, dangerous_content):
-        threshold_map = {
-            "HARM_CATEGORY_HARASSMENT": harassment,
-            "HARM_CATEGORY_HATE_SPEECH": hate_speech,
-            "HARM_CATEGORY_SEXUALLY_EXPLICIT": sexually_explicit,
-            "HARM_CATEGORY_DANGEROUS_CONTENT": dangerous_content,
-        }
-        settings = []
-        for category in HARM_CATEGORIES:
-            threshold = threshold_map.get(category, harassment)
-            settings.append(types.SafetySetting(
-                category=category,
-                threshold=threshold,
-            ))
-        return settings
+    def _build_safety_settings(self, harassment, hate_speech, sexually_explicit, dangerous_content):
+        """Build safety settings matching Nano Banana 2 format (text + image categories)."""
+        return [
+            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": hate_speech},
+            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": dangerous_content},
+            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": sexually_explicit},
+            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": harassment},
+            {"category": "HARM_CATEGORY_IMAGE_HATE", "threshold": hate_speech},
+            {"category": "HARM_CATEGORY_IMAGE_DANGEROUS_CONTENT", "threshold": dangerous_content},
+            {"category": "HARM_CATEGORY_IMAGE_HARASSMENT", "threshold": harassment},
+            {"category": "HARM_CATEGORY_IMAGE_SEXUALLY_EXPLICIT", "threshold": sexually_explicit},
+        ]
 
-    def _vary_prompt(self, client, llm_model, base_prompt, variation_index,
+    def _vary_prompt(self, token, project, region, llm_model, base_prompt, variation_index,
                      variation_system_prompt, variation_instruction, variation_temperature,
                      source_filename):
-        """Use Gemini LLM to create a prompt variation."""
-        from google.genai import types
-
+        """Use Gemini LLM (direct REST) to create a prompt variation."""
         request_text = (
             f"Base prompt: {base_prompt}\n\n"
             f"Source image filename: {source_filename}\n"
@@ -253,32 +249,54 @@ class DigitBatchGeminiImage:
         if variation_instruction.strip():
             request_text += f"\n\nAdditional guidance: {variation_instruction.strip()}"
 
-        config = types.GenerateContentConfig(
-            temperature=variation_temperature,
-            max_output_tokens=1024,
-            system_instruction=variation_system_prompt.strip() or None,
-        )
+        body = {
+            "contents": [{"role": "user", "parts": [{"text": request_text}]}],
+            "generationConfig": {
+                "temperature": variation_temperature,
+                "maxOutputTokens": 1024,
+            },
+        }
+        if variation_system_prompt and variation_system_prompt.strip():
+            body["systemInstruction"] = {"parts": [{"text": variation_system_prompt.strip()}]}
 
-        response = client.models.generate_content(
-            model=llm_model,
-            contents=request_text,
-            config=config,
+        url = build_vertex_url(project, region, llm_model)
+        resp = http_requests.post(
+            url,
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            json=body,
+            timeout=60,
         )
+        resp.raise_for_status()
+        data = resp.json()
 
-        if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
-            return response.candidates[0].content.parts[0].text.strip()
+        if "candidates" in data:
+            for candidate in data["candidates"]:
+                for part in candidate.get("content", {}).get("parts", []):
+                    if "text" in part:
+                        return part["text"].strip()
         return base_prompt  # Fallback to original
 
-    def _generate_image(self, client, image_model, parts, config, max_retries=3, base_delay=5.0):
-        """Call Gemini image generation with retry on rate limits."""
+    def _call_image_api(self, url, token, body, max_retries=3, base_delay=5.0):
+        """POST to Vertex AI with exponential backoff on rate limits."""
         last_error = None
         for attempt in range(max_retries):
             try:
-                return client.models.generate_content(
-                    model=image_model,
-                    contents=parts,
-                    config=config,
+                resp = http_requests.post(
+                    url,
+                    headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+                    json=body,
+                    timeout=300,
                 )
+                if resp.status_code in (429, 503):
+                    delay = base_delay * (2 ** attempt)
+                    logger.warning("Rate limited (HTTP %d, attempt %d/%d), retrying in %ds...",
+                                   resp.status_code, attempt + 1, max_retries, delay)
+                    time.sleep(delay)
+                    continue
+                resp.raise_for_status()
+                return resp.json()
+            except http_requests.exceptions.HTTPError:
+                raise
             except Exception as e:
                 last_error = e
                 error_str = str(e)
@@ -317,69 +335,19 @@ class DigitBatchGeminiImage:
         sexually_explicit_threshold="BLOCK_NONE",
         dangerous_content_threshold="BLOCK_NONE",
     ):
-        from google import genai
-        from google.genai import types
-
         logger.warning("=== DIGIT Batch Gemini Image: generate_batch called ===")
         logger.warning("  image_folder=%r, prompt=%r, variations=%d, image_model=%s, llm_model=%s",
                         image_folder, prompt[:80], variations_per_image, image_model, llm_model)
-        print(f"\n=== DIGIT Batch Gemini Image START ===")
-        print(f"  folder: {image_folder!r}")
-        print(f"  prompt: {prompt[:80]!r}")
-        print(f"  variations_per_image: {variations_per_image}")
 
-        print("  >> entering try block...")
-        import sys
-        sys.stdout.flush()
-        try:
-            result = self._generate_batch_inner(
-                genai, types,
-                image_folder, prompt, variations_per_image, image_model, llm_model,
-                aspect_ratio, resolution, thinking_level, temperature, variation_temperature,
-                gcp_project_id, gcp_region, output_subfolder, system_instruction,
-                variation_system_prompt, variation_instruction,
-                seed, max_dimension, delay_seconds,
-                harassment_threshold, hate_speech_threshold,
-                sexually_explicit_threshold, dangerous_content_threshold,
-            )
-            print("  >> _generate_batch_inner returned successfully")
-            sys.stdout.flush()
-            return result
-        except Exception as e:
-            print(f"\n!!! DIGIT Batch Gemini Image FATAL ERROR !!!")
-            print(f"  {type(e).__name__}: {e}")
-            import traceback
-            traceback.print_exc(file=sys.stdout)
-            sys.stdout.flush()
-            raise
-
-    def _generate_batch_inner(
-        self,
-        genai, types,
-        image_folder, prompt, variations_per_image, image_model, llm_model,
-        aspect_ratio, resolution, thinking_level, temperature, variation_temperature,
-        gcp_project_id, gcp_region, output_subfolder, system_instruction,
-        variation_system_prompt, variation_instruction,
-        seed, max_dimension, delay_seconds,
-        harassment_threshold, hate_speech_threshold,
-        sexually_explicit_threshold, dangerous_content_threshold,
-    ):
-        print("  >> inside _generate_batch_inner")
         # Validate
         image_folder = image_folder.strip()
-        print(f"  >> os.path.isdir({image_folder!r}) = {os.path.isdir(image_folder)}")
         if not os.path.isdir(image_folder):
             raise ValueError(f"Image folder not found: {image_folder}")
         if not prompt.strip():
             raise ValueError("Prompt is required.")
 
         project, region = resolve_gcp_config(gcp_project_id, gcp_region)
-
-        client = genai.Client(
-            vertexai=True,
-            project=project,
-            location=region,
-        )
+        token = get_gcp_access_token()
 
         # Create output folder
         output_dir = os.path.join(image_folder, output_subfolder.strip() or "gemini_output")
@@ -388,30 +356,31 @@ class DigitBatchGeminiImage:
         # Find source images (recursive walk through subfolders)
         image_files = []
         for root, _dirs, files in os.walk(image_folder):
-            # Skip the output subfolder
             if os.path.abspath(root).startswith(os.path.abspath(output_dir)):
                 continue
             for f in files:
                 if os.path.splitext(f)[1].lower() in IMAGE_EXTENSIONS:
                     image_files.append(os.path.join(root, f))
         image_files.sort()
-        print(f"  >> Found {len(image_files)} images in {image_folder!r}")
+
+        logger.warning("  Found %d source images in %s", len(image_files), image_folder)
 
         if not image_files:
             blank = torch.zeros((1, 512, 512, 3))
             return {"ui": {"log_text": ["No images found in folder."]},
                     "result": (blank, "No images found.", 0, output_dir)}
 
-        # Collect generated image tensors for preview output
         output_tensors = []
-
         total_ops = len(image_files) * variations_per_image
         pbar = comfy.utils.ProgressBar(total_ops)
 
         safety_settings = self._build_safety_settings(
-            types, harassment_threshold, hate_speech_threshold,
+            harassment_threshold, hate_speech_threshold,
             sexually_explicit_threshold, dangerous_content_threshold,
         )
+
+        # Build image URL
+        image_url = build_vertex_url(project, region, image_model)
 
         log_lines = []
         generated = 0
@@ -434,6 +403,8 @@ class DigitBatchGeminiImage:
                 pbar.update_absolute(op_idx)
                 continue
 
+            source_b64 = base64.b64encode(source_png_bytes).decode("utf-8")
+
             for var_idx in range(variations_per_image):
                 op_idx += 1
                 try:
@@ -442,53 +413,55 @@ class DigitBatchGeminiImage:
                         varied_prompt = prompt.strip()
                     else:
                         varied_prompt = self._vary_prompt(
-                            client, llm_model, prompt, var_idx,
+                            token, project, region, llm_model, prompt, var_idx,
                             variation_system_prompt, variation_instruction,
                             variation_temperature, img_name,
                         )
 
-                    # Step 2: Build image generation request
-                    parts = []
-                    if source_png_bytes:
-                        parts.append(types.Part.from_bytes(data=source_png_bytes, mime_type="image/png"))
-                    parts.append(types.Part.from_text(text=varied_prompt))
+                    # Step 2: Build image generation request (direct REST API)
+                    parts = [
+                        {"inlineData": {"mimeType": "image/png", "data": source_b64}},
+                        {"text": varied_prompt},
+                    ]
 
-                    effective_seed = seed if seed > 0 else random.randint(1, 2147483647)
-                    if seed > 0:
-                        effective_seed = seed + (img_idx * variations_per_image) + var_idx
-
-                    image_cfg_kwargs = {"image_size": resolution}
+                    image_config = {"imageSize": resolution}
                     if aspect_ratio != "auto":
-                        image_cfg_kwargs["aspect_ratio"] = aspect_ratio
+                        image_config["aspectRatio"] = aspect_ratio
 
-                    config = types.GenerateContentConfig(
-                        temperature=temperature,
-                        seed=effective_seed if seed > 0 else None,
-                        max_output_tokens=32768,
-                        response_modalities=["TEXT", "IMAGE"],
-                        image_config=types.ImageConfig(**image_cfg_kwargs),
-                        thinking_config=types.ThinkingConfig(thinking_level=thinking_level),
-                        system_instruction=system_instruction.strip() or None,
-                        safety_settings=safety_settings,
-                    )
+                    body = {
+                        "contents": [{"role": "user", "parts": parts}],
+                        "generationConfig": {
+                            "temperature": temperature,
+                            "maxOutputTokens": 32768,
+                            "responseModalities": ["TEXT", "IMAGE"],
+                            "imageConfig": image_config,
+                            "thinkingConfig": {"thinkingLevel": thinking_level},
+                        },
+                        "safetySettings": safety_settings,
+                    }
 
-                    # Step 3: Generate
-                    response = self._generate_image(client, image_model, parts, config)
+                    if system_instruction and system_instruction.strip():
+                        body["systemInstruction"] = {"parts": [{"text": system_instruction.strip()}]}
+
+                    # Step 3: Generate via direct REST API
+                    response_data = self._call_image_api(image_url, token, body)
 
                     # Step 4: Extract and save output image
                     saved = False
-                    if response.candidates:
-                        for candidate in response.candidates:
-                            if candidate.content and candidate.content.parts:
-                                for part in candidate.content.parts:
-                                    if part.inline_data and part.inline_data.mime_type and "image" in part.inline_data.mime_type:
-                                        tensor = _png_bytes_to_tensor(part.inline_data.data)
+                    if "candidates" in response_data:
+                        for candidate in response_data["candidates"]:
+                            content = candidate.get("content", {})
+                            for part in content.get("parts", []):
+                                if "inlineData" in part:
+                                    mime = part["inlineData"].get("mimeType", "")
+                                    if "image" in mime:
+                                        img_bytes = base64.b64decode(part["inlineData"]["data"])
+                                        tensor = _png_bytes_to_tensor(img_bytes)
                                         output_tensors.append(tensor)
                                         out_name = f"{base_name}_v{var_idx + 1:03d}.png"
                                         out_path = os.path.join(output_dir, out_name)
                                         _save_image_tensor(tensor[0], out_path)
 
-                                        # Save the prompt used alongside the image
                                         prompt_path = os.path.join(output_dir, f"{base_name}_v{var_idx + 1:03d}.txt")
                                         with open(prompt_path, "w", encoding="utf-8") as f:
                                             f.write(varied_prompt)
@@ -532,14 +505,12 @@ class DigitBatchGeminiImage:
 
         logger.info("Batch Gemini Image: %s", summary)
 
-        # Build image batch tensor — resize all to match first image dimensions
+        # Build image batch tensor
         if output_tensors:
-            # All tensors are (1,H,W,3) — resize to common dimensions for batching
             target_h, target_w = output_tensors[0].shape[1], output_tensors[0].shape[2]
             resized = []
             for t in output_tensors:
                 if t.shape[1] != target_h or t.shape[2] != target_w:
-                    # Resize via PIL
                     img_np = (t[0].cpu().numpy() * 255).clip(0, 255).astype(np.uint8)
                     img = Image.fromarray(img_np).resize((target_w, target_h), Image.LANCZOS)
                     t = torch.from_numpy(np.array(img).astype(np.float32) / 255.0).unsqueeze(0)
