@@ -424,7 +424,10 @@ class DigitBatchGeminiImage:
                         {"text": varied_prompt},
                     ]
 
-                    image_config = {"imageSize": resolution}
+                    image_config = {
+                        "imageSize": resolution,
+                        "imageOutputOptions": {"mimeType": "image/png"},
+                    }
                     if aspect_ratio != "auto":
                         image_config["aspectRatio"] = aspect_ratio
 
@@ -436,6 +439,7 @@ class DigitBatchGeminiImage:
                             "thinkingConfig": {"thinkingLevel": thinking_level},
                         },
                         "safetySettings": safety_settings,
+                        "uploadImagesToStorage": True,
                     }
 
                     if system_instruction and system_instruction.strip():

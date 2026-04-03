@@ -171,7 +171,10 @@ class DigitGeminiImage:
                     parts.append({"inlineData": {"mimeType": "image/png", "data": b64}})
 
         # Build imageConfig — matching Nano Banana 2 exactly
-        image_config = {"imageSize": resolution}
+        image_config = {
+            "imageSize": resolution,
+            "imageOutputOptions": {"mimeType": "image/png"},
+        }
         if aspect_ratio != "auto":
             image_config["aspectRatio"] = aspect_ratio
 
@@ -187,6 +190,7 @@ class DigitGeminiImage:
                 harassment_threshold, hate_speech_threshold,
                 sexually_explicit_threshold, dangerous_content_threshold,
             ),
+            "uploadImagesToStorage": True,
         }
 
         if system_instruction and system_instruction.strip():
