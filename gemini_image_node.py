@@ -190,7 +190,6 @@ class DigitGeminiImage:
                 harassment_threshold, hate_speech_threshold,
                 sexually_explicit_threshold, dangerous_content_threshold,
             ),
-            "uploadImagesToStorage": True,
         }
 
         if system_instruction and system_instruction.strip():

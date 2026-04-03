@@ -439,7 +439,6 @@ class DigitBatchGeminiImage:
                             "thinkingConfig": {"thinkingLevel": thinking_level},
                         },
                         "safetySettings": safety_settings,
-                        "uploadImagesToStorage": True,
                     }
 
                     if system_instruction and system_instruction.strip():
