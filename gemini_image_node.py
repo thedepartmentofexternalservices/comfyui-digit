@@ -53,16 +53,18 @@ def _png_bytes_to_tensor(png_bytes):
 
 class DigitGeminiImage:
     MODELS = [
-        "gemini-3-pro-image-preview",
         "gemini-3.1-flash-image-preview",
+        "gemini-3-pro-image-preview",
         "gemini-2.5-flash-image",
         "gemini-2.5-flash",
     ]
 
     ASPECT_RATIOS = [
-        "1:1", "2:3", "3:2", "3:4", "4:1", "4:3",
+        "auto", "1:1", "2:3", "3:2", "3:4", "4:1", "4:3",
         "4:5", "5:4", "8:1", "9:16", "16:9", "21:9",
     ]
+
+    THINKING_LEVELS = ["MINIMAL", "HIGH"]
 
     RESOLUTIONS = ["1K", "2K", "4K"]
 
@@ -74,6 +76,7 @@ class DigitGeminiImage:
                 "model": (cls.MODELS, {"default": cls.MODELS[0]}),
                 "aspect_ratio": (cls.ASPECT_RATIOS, {"default": "16:9"}),
                 "resolution": (cls.RESOLUTIONS, {"default": "1K"}),
+                "thinking_level": (cls.THINKING_LEVELS, {"default": "MINIMAL", "tooltip": "Thinking level for image generation. HIGH may improve quality."}),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 2147483647}),
                 "temperature": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.01}),
                 "gcp_project_id": ("STRING", {"default": default_project(), "tooltip": "GCP project ID. Auto-detected from DIGIT_GCP_PROJECT env var or GCP metadata."}),
@@ -128,6 +131,7 @@ class DigitGeminiImage:
         model,
         aspect_ratio,
         resolution,
+        thinking_level,
         seed,
         temperature,
         image1=None,
@@ -178,10 +182,9 @@ class DigitGeminiImage:
             sexually_explicit_threshold, dangerous_content_threshold,
         )
 
-        # image_size is only supported on Pro models, not Flash
-        image_cfg_kwargs = {"aspect_ratio": aspect_ratio}
-        if "pro" in model.lower():
-            image_cfg_kwargs["image_size"] = resolution
+        image_cfg_kwargs = {"image_size": resolution}
+        if aspect_ratio != "auto":
+            image_cfg_kwargs["aspect_ratio"] = aspect_ratio
 
         config = types.GenerateContentConfig(
             temperature=temperature,
@@ -191,6 +194,7 @@ class DigitGeminiImage:
             max_output_tokens=32768,
             response_modalities=["TEXT", "IMAGE"],
             image_config=types.ImageConfig(**image_cfg_kwargs),
+            thinking_config=types.ThinkingConfig(thinking_level=thinking_level),
             system_instruction=system_instruction.strip() or None,
             safety_settings=safety_settings,
         )

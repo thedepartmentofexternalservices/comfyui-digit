@@ -98,11 +98,13 @@ class DigitBatchGeminiImage:
     ]
 
     ASPECT_RATIOS = [
-        "1:1", "2:3", "3:2", "3:4", "4:1", "4:3",
+        "auto", "1:1", "2:3", "3:2", "3:4", "4:1", "4:3",
         "4:5", "5:4", "8:1", "9:16", "16:9", "21:9",
     ]
 
     RESOLUTIONS = ["1K", "2K", "4K"]
+
+    THINKING_LEVELS = ["MINIMAL", "HIGH"]
 
     CATEGORY = "DIGIT"
     RETURN_TYPES = ("IMAGE", "STRING", "INT", "STRING")
@@ -141,6 +143,10 @@ class DigitBatchGeminiImage:
                 }),
                 "aspect_ratio": (cls.ASPECT_RATIOS, {"default": "16:9"}),
                 "resolution": (cls.RESOLUTIONS, {"default": "1K"}),
+                "thinking_level": (cls.THINKING_LEVELS, {
+                    "default": "MINIMAL",
+                    "tooltip": "Thinking level for image generation. HIGH may improve quality.",
+                }),
                 "temperature": ("FLOAT", {
                     "default": 1.0,
                     "min": 0.0,
@@ -294,6 +300,7 @@ class DigitBatchGeminiImage:
         llm_model,
         aspect_ratio,
         resolution,
+        thinking_level,
         temperature,
         variation_temperature,
         gcp_project_id="",
@@ -328,7 +335,7 @@ class DigitBatchGeminiImage:
             result = self._generate_batch_inner(
                 genai, types,
                 image_folder, prompt, variations_per_image, image_model, llm_model,
-                aspect_ratio, resolution, temperature, variation_temperature,
+                aspect_ratio, resolution, thinking_level, temperature, variation_temperature,
                 gcp_project_id, gcp_region, output_subfolder, system_instruction,
                 variation_system_prompt, variation_instruction,
                 seed, max_dimension, delay_seconds,
@@ -350,7 +357,7 @@ class DigitBatchGeminiImage:
         self,
         genai, types,
         image_folder, prompt, variations_per_image, image_model, llm_model,
-        aspect_ratio, resolution, temperature, variation_temperature,
+        aspect_ratio, resolution, thinking_level, temperature, variation_temperature,
         gcp_project_id, gcp_region, output_subfolder, system_instruction,
         variation_system_prompt, variation_instruction,
         seed, max_dimension, delay_seconds,
@@ -450,15 +457,17 @@ class DigitBatchGeminiImage:
                     if seed > 0:
                         effective_seed = seed + (img_idx * variations_per_image) + var_idx
 
+                    image_cfg_kwargs = {"image_size": resolution}
+                    if aspect_ratio != "auto":
+                        image_cfg_kwargs["aspect_ratio"] = aspect_ratio
+
                     config = types.GenerateContentConfig(
                         temperature=temperature,
                         seed=effective_seed if seed > 0 else None,
                         max_output_tokens=32768,
                         response_modalities=["TEXT", "IMAGE"],
-                        image_config=types.ImageConfig(
-                            aspect_ratio=aspect_ratio,
-                            **({"image_size": resolution} if "pro" in image_model.lower() else {}),
-                        ),
+                        image_config=types.ImageConfig(**image_cfg_kwargs),
+                        thinking_config=types.ThinkingConfig(thinking_level=thinking_level),
                         system_instruction=system_instruction.strip() or None,
                         safety_settings=safety_settings,
                     )
