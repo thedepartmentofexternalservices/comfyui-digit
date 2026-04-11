@@ -32,6 +32,7 @@ from .elevenlabs_nodes import (
     DigitElevenLabsSTS,
     DigitElevenLabsDialogue,
 )
+from .seedance_video_node import DigitDanceVideo
 
 NODE_CLASS_MAPPINGS = {
     "DigitLLMQuery": LLMQueryNode,
@@ -77,6 +78,7 @@ NODE_CLASS_MAPPINGS = {
     "DigitElevenLabsVoiceClone": DigitElevenLabsVoiceClone,
     "DigitElevenLabsSTS": DigitElevenLabsSTS,
     "DigitElevenLabsDialogue": DigitElevenLabsDialogue,
+    "DigitDanceVideo": DigitDanceVideo,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -123,6 +125,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "DigitElevenLabsVoiceClone": "DIGIT ElevenLabs Voice Clone",
     "DigitElevenLabsSTS": "DIGIT ElevenLabs Speech to Speech",
     "DigitElevenLabsDialogue": "DIGIT ElevenLabs Dialogue",
+    "DigitDanceVideo": "DIGIT Seedance Video",
 }
 
 WEB_DIRECTORY = "./web"

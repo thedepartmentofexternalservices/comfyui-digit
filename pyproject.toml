@@ -1,7 +1,7 @@
 [project]
 name = "comfyui-digit"
-version = "3.0.0"
-description = "DIGIT — Deep Infrastructure for Generative Image Training. ComfyUI nodes for Gemini generation, Veo video, LoRA training, dataset management, and auto-captioning."
+version = "3.1.0"
+description = "DIGIT — Deep Infrastructure for Generative Image Training. ComfyUI nodes for Gemini generation, Veo + Seedance 2.0 video, LoRA training, dataset management, and auto-captioning."
 license = { text = "MIT" }
 requires-python = ">=3.9"
 dependencies = [
@@ -12,6 +12,8 @@ dependencies = [
     "piexif",
     "opencv-python",
     "pyyaml",
+    "fal-client",
+    "soundfile",
 ]
 
 [project.optional-dependencies]

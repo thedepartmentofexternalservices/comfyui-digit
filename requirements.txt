@@ -5,6 +5,8 @@ google-cloud-storage
 piexif
 opencv-python
 pyyaml
+fal-client
+soundfile
 
 # Training dependencies (install with: pip install -r requirements-training.txt)
 # torch>=2.1.0
