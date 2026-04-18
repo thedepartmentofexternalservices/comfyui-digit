@@ -17,6 +17,8 @@ def _resolve_projekts_roots():
     candidates = [
         "/mnt/projekts/PROJEKTS",
         "/Volumes/projekts/PROJEKTS",
+        "/Volumes/saint/goose/PROJEKTS",
+        "/mnt/lucid/PROJEKTS",
     ]
     found = [c for c in candidates if os.path.isdir(c)]
     return found if found else _DEFAULT_ROOTS
