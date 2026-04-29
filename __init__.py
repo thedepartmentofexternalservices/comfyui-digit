@@ -33,7 +33,7 @@ from .elevenlabs_nodes import (
     DigitElevenLabsDialogue,
 )
 from .seedance_video_node import DigitDanceVideo
-from .shade_nodes import ShadeProjects, ShadeSave
+from .shade_nodes import ShadeMount, ShadeSave
 
 NODE_CLASS_MAPPINGS = {
     "DigitLLMQuery": LLMQueryNode,
@@ -81,7 +81,7 @@ NODE_CLASS_MAPPINGS = {
     "DigitElevenLabsDialogue": DigitElevenLabsDialogue,
     "DigitDanceVideo": DigitDanceVideo,
     # Shade.inc nodes
-    "ShadeProjects": ShadeProjects,
+    "ShadeMount": ShadeMount,
     "ShadeSave": ShadeSave,
 }
 
@@ -131,7 +131,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "DigitElevenLabsDialogue": "DIGIT ElevenLabs Dialogue",
     "DigitDanceVideo": "DIGIT Seedance Video",
     # Shade.inc nodes
-    "ShadeProjects": "Shade PROJEKTS",
+    "ShadeMount": "Shade Mount",
     "ShadeSave": "Save to Shade",
 }
 
