@@ -6,6 +6,7 @@ piexif
 opencv-python
 pyyaml
 fal-client
+replicate
 soundfile
 
 # Training dependencies (install with: pip install -r requirements-training.txt)

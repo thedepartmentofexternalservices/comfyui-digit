@@ -33,6 +33,7 @@ from .elevenlabs_nodes import (
     DigitElevenLabsDialogue,
 )
 from .seedance_video_node import DigitDanceVideo
+from .replicate_seedance_node import DigitReplicateSeedance
 from .shade_nodes import ShadeMount, ShadeSave
 
 NODE_CLASS_MAPPINGS = {
@@ -80,6 +81,7 @@ NODE_CLASS_MAPPINGS = {
     "DigitElevenLabsSTS": DigitElevenLabsSTS,
     "DigitElevenLabsDialogue": DigitElevenLabsDialogue,
     "DigitDanceVideo": DigitDanceVideo,
+    "DigitReplicateSeedance": DigitReplicateSeedance,
     # Shade.inc nodes
     "ShadeMount": ShadeMount,
     "ShadeSave": ShadeSave,
@@ -130,6 +132,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "DigitElevenLabsSTS": "DIGIT ElevenLabs Speech to Speech",
     "DigitElevenLabsDialogue": "DIGIT ElevenLabs Dialogue",
     "DigitDanceVideo": "DIGIT Seedance Video",
+    "DigitReplicateSeedance": "DIGIT Seedance Video (Replicate)",
     # Shade.inc nodes
     "ShadeMount": "Shade Mount",
     "ShadeSave": "Save to Shade",
