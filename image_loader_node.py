@@ -10,7 +10,7 @@ logger = logging.getLogger("DigitImageLoader")
 from PIL import Image
 from server import PromptServer
 
-from .projekts_utils import PROJEKTS_ROOTS, PROJECT_RE, FRAME_RE, scan_projects, scan_shots
+from .projekts_utils import get_available_projekts_roots, PROJECT_RE, FRAME_RE, scan_projects, scan_shots
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".exr", ".tif", ".tiff", ".bmp", ".webp"}
 
@@ -83,9 +83,7 @@ class DigitImageLoader:
         except (FileNotFoundError, OSError):
             files = []
 
-        available_roots = [r for r in PROJEKTS_ROOTS if os.path.isdir(r)]
-        if not available_roots:
-            available_roots = PROJEKTS_ROOTS
+        available_roots = get_available_projekts_roots()
 
         first_root = available_roots[0]
         projects = scan_projects(first_root)

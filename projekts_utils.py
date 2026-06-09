@@ -9,21 +9,33 @@ _DEFAULT_ROOTS = [
     os.path.join(os.path.expanduser("~"), "PROJEKTS"),
 ]
 
-def _resolve_projekts_roots():
+# Known mount points checked on each call so late-mounted volumes are picked up.
+_CANDIDATE_ROOTS = [
+    "/mnt/projekts/PROJEKTS",
+    "/Volumes/projekts/PROJEKTS",
+    "/Volumes/saint/goose/PROJEKTS",
+    "/mnt/lucid/PROJEKTS",
+]
+
+
+def get_projekts_roots():
+    """Return available PROJEKTS roots, re-scanning mount points each call."""
     env = os.environ.get("DIGIT_PROJEKTS_ROOTS", "")
     if env:
         return [p.strip() for p in env.split(":") if p.strip()]
-    # Auto-detect common mount points
-    candidates = [
-        "/mnt/projekts/PROJEKTS",
-        "/Volumes/projekts/PROJEKTS",
-        "/Volumes/saint/goose/PROJEKTS",
-        "/mnt/lucid/PROJEKTS",
-    ]
-    found = [c for c in candidates if os.path.isdir(c)]
+    found = [c for c in _CANDIDATE_ROOTS if os.path.isdir(c)]
     return found if found else _DEFAULT_ROOTS
 
-PROJEKTS_ROOTS = _resolve_projekts_roots()
+
+def get_available_projekts_roots():
+    """Roots that currently exist on disk; falls back to configured list."""
+    roots = get_projekts_roots()
+    available = [r for r in roots if os.path.isdir(r)]
+    return available if available else roots
+
+
+# Back-compat alias; prefer get_projekts_roots() for fresh results.
+PROJEKTS_ROOTS = get_projekts_roots()
 
 PROJECT_RE = re.compile(r"^\d{5}_")
 FRAME_RE = re.compile(r"\.(\d+)\.[^.]+$")
