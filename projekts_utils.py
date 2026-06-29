@@ -41,6 +41,28 @@ PROJECT_RE = re.compile(r"^\d{5}_")
 FRAME_RE = re.compile(r"\.(\d+)\.[^.]+$")
 
 
+def is_within_roots(path, roots=None):
+    """Return True if `path` resolves to a location inside one of the PROJEKTS roots.
+
+    Both sides are passed through os.path.realpath, so symlinks and ``..``
+    traversal cannot escape the configured roots. Used to constrain the
+    /digit/browse listing endpoint to the pipeline filespace (security: M1).
+    """
+    roots = roots if roots is not None else get_projekts_roots()
+    try:
+        real = os.path.realpath(path)
+    except (OSError, ValueError):
+        return False
+    for root in roots:
+        try:
+            real_root = os.path.realpath(root)
+        except (OSError, ValueError):
+            continue
+        if real == real_root or real.startswith(real_root + os.sep):
+            return True
+    return False
+
+
 def scan_projects(projekts_root):
     """Return sorted list of project folders matching 5-digit prefix pattern."""
     if not os.path.isdir(projekts_root):

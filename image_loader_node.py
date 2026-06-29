@@ -10,7 +10,7 @@ logger = logging.getLogger("DigitImageLoader")
 from PIL import Image
 from server import PromptServer
 
-from .projekts_utils import get_available_projekts_roots, PROJECT_RE, FRAME_RE, scan_projects, scan_shots
+from .projekts_utils import get_available_projekts_roots, is_within_roots, PROJECT_RE, FRAME_RE, scan_projects, scan_shots
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".exr", ".tif", ".tiff", ".bmp", ".webp"}
 
@@ -26,22 +26,40 @@ FILTER_PRESETS = {
 async def browse_filesystem(request):
     """List directories and files at a given path.
 
+    Listing is constrained to the configured PROJEKTS roots so this endpoint
+    cannot be used to enumerate the rest of the host filesystem (security: M1).
+
     Query params:
-        path: directory to list
-        filter: "images" (default), "loras", or "all"
+        path: directory to list (must resolve inside a PROJEKTS root)
+        filter: "images" (default), "loras", "videos", or "all"
     """
     path = request.rel_url.query.get("path", "")
-    if not path or not os.path.isdir(path):
+
+    # No path given -> return the configured roots as navigation starting
+    # points rather than exposing "/".
+    if not path:
+        roots = get_available_projekts_roots()
+        return web.json_response({"path": "", "dirs": roots, "files": [], "roots": roots})
+
+    # Containment: only paths inside the PROJEKTS roots may be listed.
+    if not is_within_roots(path):
+        return web.json_response(
+            {"error": "Path is outside the allowed PROJEKTS roots", "dirs": [], "files": []},
+            status=403,
+        )
+
+    if not os.path.isdir(path):
         return web.json_response({"error": "Invalid path", "dirs": [], "files": []}, status=400)
 
+    real_path = os.path.realpath(path)
     filter_name = request.rel_url.query.get("filter", "images")
     allowed_exts = FILTER_PRESETS.get(filter_name, IMAGE_EXTENSIONS)
 
     dirs = []
     files = []
     try:
-        for entry in sorted(os.listdir(path)):
-            full = os.path.join(path, entry)
+        for entry in sorted(os.listdir(real_path)):
+            full = os.path.join(real_path, entry)
             if entry.startswith("."):
                 continue
             if os.path.isdir(full):
@@ -56,7 +74,7 @@ async def browse_filesystem(request):
     except PermissionError:
         return web.json_response({"error": "Permission denied", "dirs": [], "files": []}, status=403)
 
-    return web.json_response({"path": path, "dirs": dirs, "files": files})
+    return web.json_response({"path": real_path, "dirs": dirs, "files": files})
 
 
 class DigitImageLoader:
