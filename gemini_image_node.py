@@ -210,7 +210,7 @@ class DigitGeminiImage:
 
         if "candidates" in response_data:
             for candidate in response_data["candidates"]:
-                content = candidate.get("content", {})
+                content = candidate.get("content") or {}
                 for part in content.get("parts", []):
                     if "inlineData" in part:
                         mime = part["inlineData"].get("mimeType", "")
@@ -222,6 +222,22 @@ class DigitGeminiImage:
                         text_parts.append(part["text"])
 
         if not image_tensors:
+            if response_data.get("error"):
+                logger.warning("DIGIT Gemini Image API error: %s", response_data["error"])
+            if response_data.get("promptFeedback"):
+                logger.warning("DIGIT Gemini Image promptFeedback: %s", response_data["promptFeedback"])
+            for i, candidate in enumerate(response_data.get("candidates", [])):
+                content = candidate.get("content") or {}
+                parts = content.get("parts", [])
+                logger.warning(
+                    "DIGIT Gemini Image candidate[%d]: finishReason=%s, part_keys=%s",
+                    i,
+                    candidate.get("finishReason", "unknown"),
+                    [list(p.keys()) for p in parts],
+                )
+                for part in parts:
+                    if "text" in part:
+                        logger.warning("DIGIT Gemini Image text: %s", part["text"][:500])
             logger.warning("Gemini returned no images. Returning blank fallback.")
             image_tensors.append(torch.zeros((1, 1024, 1024, 3)))
 
