@@ -437,7 +437,7 @@ Save videos to the same VFX-pipeline folder structure as the Image Saver. Accept
 | task | STRING | comp | Task name. |
 | start_frame | INT | 1001 | Starting frame number. |
 | frame_pad | INT | 4 | Frame number padding. |
-| save_workflow | COMBO | api | Save workflow metadata as JSON sidecar. |
+| save_workflow | COMBO | ui | Save workflow metadata as JSON sidecar: "ui", "api", "ui + api", or "none". |
 | video | VIDEO | — | Single video input (from Veo node's VIDEO output). |
 | video_paths | VEO_PATHS | — | Batch video paths (from Veo node's VEO_PATHS output). Saves all videos with incrementing frame numbers. |
 
@@ -555,6 +555,29 @@ git clone https://github.com/thedepartmentofexternalservices/comfyui-digit.git
 cd comfyui-digit
 pip install -r requirements.txt
 ```
+
+### Deploy to GCP ComfyUI VMs
+If your fleet runs ComfyUI on Compute Engine with `comfyui-digit` cloned into `custom_nodes`, update all nodes from a machine with `gcloud` access:
+
+```bash
+gcloud config set project YOUR_PROJECT_ID
+./scripts/deploy-gcp-comfyui.sh
+```
+
+Common overrides:
+
+```bash
+# Match instances by label instead of name
+INSTANCE_FILTER="labels.app=comfyui" ./scripts/deploy-gcp-comfyui.sh
+
+# Private VMs without external IPs
+USE_IAP=1 ./scripts/deploy-gcp-comfyui.sh
+
+# Custom install path or service name
+DIGIT_NODE_DIR="/opt/ComfyUI/custom_nodes/comfyui-digit" COMFYUI_SERVICE=comfyui ./scripts/deploy-gcp-comfyui.sh
+```
+
+The script runs `git pull` on each matching VM and restarts the `comfyui` systemd service.
 
 ---
 

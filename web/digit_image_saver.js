@@ -35,6 +35,19 @@ app.registerExtension({
             }
         };
 
+        async function refreshRoots() {
+            const resp = await api.fetchApi("/digit/roots");
+            if (resp.status === 200) {
+                const roots = await resp.json();
+                if (roots.length > 0) {
+                    rootWidget.options.values = roots;
+                    if (!roots.includes(rootWidget.value)) {
+                        rootWidget.value = roots[0];
+                    }
+                }
+            }
+        }
+
         async function refreshProjects() {
             const root = rootWidget.value;
             const resp = await api.fetchApi(`/digit/projects?root=${encodeURIComponent(root)}`);
@@ -80,9 +93,8 @@ app.registerExtension({
             }
         };
 
-        // Initial load
-        if (isHasShotNode) {
-            await refreshShots();
-        }
+        // Initial load — refresh roots and projects from live filesystem scan
+        await refreshRoots();
+        await refreshProjects();
     }
 });

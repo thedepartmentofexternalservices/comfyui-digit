@@ -12,7 +12,7 @@ from PIL import Image, PngImagePlugin
 from aiohttp import web
 from server import PromptServer
 
-from .projekts_utils import PROJEKTS_ROOTS, PROJECT_RE, FRAME_RE, scan_projects, scan_shots, next_frame
+from .projekts_utils import get_available_projekts_roots, PROJECT_RE, FRAME_RE, scan_projects, scan_shots, next_frame
 
 
 def sRGBtoLinear(npArray):
@@ -22,9 +22,17 @@ def sRGBtoLinear(npArray):
     return result.astype(np.float32)
 
 
+@PromptServer.instance.routes.get("/digit/roots")
+async def get_roots(request):
+    return web.json_response(get_available_projekts_roots())
+
+
 @PromptServer.instance.routes.get("/digit/projects")
 async def get_projects(request):
     root = request.rel_url.query.get("root", "")
+    if not root:
+        roots = get_available_projekts_roots()
+        root = roots[0] if roots else ""
     projects = scan_projects(root)
     return web.json_response(projects)
 
@@ -46,9 +54,7 @@ class DigitImageSaver:
 
     @classmethod
     def INPUT_TYPES(cls):
-        available_roots = [r for r in PROJEKTS_ROOTS if os.path.isdir(r)]
-        if not available_roots:
-            available_roots = PROJEKTS_ROOTS
+        available_roots = get_available_projekts_roots()
 
         first_root = available_roots[0]
         projects = scan_projects(first_root)

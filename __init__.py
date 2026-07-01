@@ -35,6 +35,8 @@ from .elevenlabs_nodes import (
 from .seedance_video_node import DigitDanceVideo
 from .replicate_seedance_node import DigitReplicateSeedance
 from .shade_nodes import ShadeMount, ShadeSave
+from .drift_gate_node import DigitDriftGate, DigitDriftGateFromPaths
+from .drift_qc_preview_node import DigitDriftQCPreview
 
 NODE_CLASS_MAPPINGS = {
     "DigitLLMQuery": LLMQueryNode,
@@ -85,6 +87,9 @@ NODE_CLASS_MAPPINGS = {
     # Shade.inc nodes
     "ShadeMount": ShadeMount,
     "ShadeSave": ShadeSave,
+    "DigitDriftGate": DigitDriftGate,
+    "DigitDriftGateFromPaths": DigitDriftGateFromPaths,
+    "DigitDriftQCPreview": DigitDriftQCPreview,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -136,7 +141,19 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     # Shade.inc nodes
     "ShadeMount": "Shade Mount",
     "ShadeSave": "Save to Shade",
+    "DigitDriftGate": "DIGIT Drift Gate",
+    "DigitDriftGateFromPaths": "DIGIT Drift Gate (Paths)",
+    "DigitDriftQCPreview": "DIGIT Drift QC Preview",
 }
 
 WEB_DIRECTORY = "./web"
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS", "WEB_DIRECTORY"]
+
+# Initialize GCP Compute Broker execution hook
+try:
+    from .broker_hook import init_broker_hook
+    init_broker_hook()
+except Exception as _e:
+    import logging
+    logging.getLogger("DigitBrokerHook").error(f"Failed to load broker execution hook: {_e}")
+

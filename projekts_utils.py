@@ -9,24 +9,58 @@ _DEFAULT_ROOTS = [
     os.path.join(os.path.expanduser("~"), "PROJEKTS"),
 ]
 
-def _resolve_projekts_roots():
+# Known mount points checked on each call so late-mounted volumes are picked up.
+_CANDIDATE_ROOTS = [
+    "/mnt/projekts/PROJEKTS",
+    "/Volumes/projekts/PROJEKTS",
+    "/Volumes/saint/goose/PROJEKTS",
+    "/mnt/lucid/PROJEKTS",
+]
+
+
+def get_projekts_roots():
+    """Return available PROJEKTS roots, re-scanning mount points each call."""
     env = os.environ.get("DIGIT_PROJEKTS_ROOTS", "")
     if env:
         return [p.strip() for p in env.split(":") if p.strip()]
-    # Auto-detect common mount points
-    candidates = [
-        "/mnt/projekts/PROJEKTS",
-        "/Volumes/projekts/PROJEKTS",
-        "/Volumes/saint/goose/PROJEKTS",
-        "/mnt/lucid/PROJEKTS",
-    ]
-    found = [c for c in candidates if os.path.isdir(c)]
+    found = [c for c in _CANDIDATE_ROOTS if os.path.isdir(c)]
     return found if found else _DEFAULT_ROOTS
 
-PROJEKTS_ROOTS = _resolve_projekts_roots()
+
+def get_available_projekts_roots():
+    """Roots that currently exist on disk; falls back to configured list."""
+    roots = get_projekts_roots()
+    available = [r for r in roots if os.path.isdir(r)]
+    return available if available else roots
+
+
+# Back-compat alias; prefer get_projekts_roots() for fresh results.
+PROJEKTS_ROOTS = get_projekts_roots()
 
 PROJECT_RE = re.compile(r"^\d{5}_")
 FRAME_RE = re.compile(r"\.(\d+)\.[^.]+$")
+
+
+def is_within_roots(path, roots=None):
+    """Return True if `path` resolves to a location inside one of the PROJEKTS roots.
+
+    Both sides are passed through os.path.realpath, so symlinks and ``..``
+    traversal cannot escape the configured roots. Used to constrain the
+    /digit/browse listing endpoint to the pipeline filespace (security: M1).
+    """
+    roots = roots if roots is not None else get_projekts_roots()
+    try:
+        real = os.path.realpath(path)
+    except (OSError, ValueError):
+        return False
+    for root in roots:
+        try:
+            real_root = os.path.realpath(root)
+        except (OSError, ValueError):
+            continue
+        if real == real_root or real.startswith(real_root + os.sep):
+            return True
+    return False
 
 
 def scan_projects(projekts_root):

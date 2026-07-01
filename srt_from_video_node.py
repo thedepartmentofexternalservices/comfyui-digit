@@ -21,7 +21,7 @@ import time
 import comfy.utils
 
 from .gcp_config import resolve_gcp_config, default_project, default_region
-from .projekts_utils import PROJEKTS_ROOTS, scan_projects
+from .projekts_utils import get_available_projekts_roots, scan_projects
 
 logger = logging.getLogger(__name__)
 
@@ -670,9 +670,7 @@ class DigitSRTFromVideo:
 
     @classmethod
     def INPUT_TYPES(cls):
-        available_roots = [r for r in PROJEKTS_ROOTS if os.path.isdir(r)]
-        if not available_roots:
-            available_roots = PROJEKTS_ROOTS
+        available_roots = get_available_projekts_roots()
 
         first_root = available_roots[0]
         projects = scan_projects(first_root)
@@ -863,14 +861,8 @@ class DigitBatchSRTFromVideo:
             "default": 1.0, "min": 0.0, "max": 30.0, "step": 0.5,
             "tooltip": "Delay between API calls to avoid rate limiting.",
         })
-        optional["projekts_root"] = (
-            [r for r in PROJEKTS_ROOTS if os.path.isdir(r)] or PROJEKTS_ROOTS,
-        )
-        optional["project"] = (
-            scan_projects(
-                next((r for r in PROJEKTS_ROOTS if os.path.isdir(r)), PROJEKTS_ROOTS[0])
-            ),
-        )
+        optional["projekts_root"] = (get_available_projekts_roots(),)
+        optional["project"] = (scan_projects(get_available_projekts_roots()[0]),)
 
         return {
             "required": {

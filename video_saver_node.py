@@ -5,7 +5,7 @@ import shutil
 
 from server import PromptServer
 
-from .projekts_utils import PROJEKTS_ROOTS, scan_projects, scan_shots, next_frame
+from .projekts_utils import get_available_projekts_roots, scan_projects, scan_shots, next_frame
 
 logger = logging.getLogger("DigitVideoSaver")
 
@@ -19,9 +19,7 @@ class DigitVideoSaver:
 
     @classmethod
     def INPUT_TYPES(cls):
-        available_roots = [r for r in PROJEKTS_ROOTS if os.path.isdir(r)]
-        if not available_roots:
-            available_roots = PROJEKTS_ROOTS
+        available_roots = get_available_projekts_roots()
 
         first_root = available_roots[0]
         projects = scan_projects(first_root)
@@ -37,7 +35,7 @@ class DigitVideoSaver:
                 "task": ("STRING", {"default": "comp"}),
                 "start_frame": ("INT", {"default": 1001, "min": 0, "max": 99999999, "step": 1}),
                 "frame_pad": ("INT", {"default": 4, "min": 1, "max": 8, "step": 1}),
-                "save_workflow": (["api", "ui", "ui + api", "none"],),
+                "save_workflow": (["ui", "api", "ui + api", "none"],),
             },
             "optional": {
                 "video": ("VIDEO",),
