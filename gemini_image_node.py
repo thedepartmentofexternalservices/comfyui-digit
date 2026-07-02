@@ -10,6 +10,12 @@ import torch
 from PIL import Image
 
 from .gcp_config import resolve_gcp_config, get_gcp_access_token, build_vertex_url, default_project, default_region
+from .gemini_image_models import (
+    GEMINI_IMAGE_MODELS,
+    DEFAULT_GEMINI_IMAGE_MODEL,
+    MODELS_1K_ONLY,
+    RESOLUTIONS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -62,12 +68,7 @@ def _png_bytes_to_tensor(png_bytes):
 
 
 class DigitGeminiImage:
-    MODELS = [
-        "gemini-3.1-flash-image-preview",
-        "gemini-3-pro-image-preview",
-        "gemini-2.5-flash-image",
-        "gemini-2.5-flash",
-    ]
+    MODELS = GEMINI_IMAGE_MODELS
 
     ASPECT_RATIOS = [
         "auto", "1:1", "2:3", "3:2", "3:4", "4:1", "4:3",
@@ -76,14 +77,14 @@ class DigitGeminiImage:
 
     THINKING_LEVELS = ["MINIMAL", "HIGH"]
 
-    RESOLUTIONS = ["1K", "2K", "4K"]
+    RESOLUTIONS = RESOLUTIONS
 
     @classmethod
     def INPUT_TYPES(cls):
         return {
             "required": {
                 "prompt": ("STRING", {"default": "", "multiline": True}),
-                "model": (cls.MODELS, {"default": cls.MODELS[0]}),
+                "model": (cls.MODELS, {"default": DEFAULT_GEMINI_IMAGE_MODEL}),
                 "aspect_ratio": (cls.ASPECT_RATIOS, {"default": "16:9"}),
                 "resolution": (cls.RESOLUTIONS, {"default": "1K"}),
                 "thinking_level": (cls.THINKING_LEVELS, {"default": "MINIMAL", "tooltip": "Thinking level for image generation. HIGH may improve quality."}),
@@ -156,6 +157,10 @@ class DigitGeminiImage:
     ):
         if not prompt:
             raise ValueError("Prompt is required")
+        if model in MODELS_1K_ONLY and resolution != "1K":
+            raise ValueError(
+                f"Model {model} (Nano Banana 2 Lite) only supports 1K resolution, got {resolution}."
+            )
 
         project, region = resolve_gcp_config(gcp_project_id, gcp_region)
         token = get_gcp_access_token()
