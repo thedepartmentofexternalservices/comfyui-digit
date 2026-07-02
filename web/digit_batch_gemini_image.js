@@ -1,11 +1,14 @@
 import { app } from "../../scripts/app.js";
 import { openFolderBrowserDialog } from "./digit_browse_utils.js";
+import { setupGeminiImageResolutionFilter } from "./digit_gemini_image_utils.js";
 
 app.registerExtension({
     name: "DIGIT.BatchGeminiImage",
 
     async nodeCreated(node) {
         if (node.comfyClass !== "DigitBatchGeminiImage") return;
+
+        setupGeminiImageResolutionFilter(node, "image_model");
 
         // Add Browse button for image_folder
         const folderWidget = node.widgets.find(w => w.name === "image_folder");

@@ -32,7 +32,8 @@ This is a unified node — it handles text-to-image, image editing, and multi-im
 
 | Model | Internal Name | What It Is |
 |-------|--------------|------------|
-| Gemini 3.1 Flash Image | `gemini-3.1-flash-image` | Nano Banana 2 — Google's newest and fastest image model. Default choice. |
+| Gemini 3.1 Flash Image | `gemini-3.1-flash-image` | Nano Banana 2 — balanced quality and speed. Default choice. |
+| Gemini 3.1 Flash-Lite Image | `gemini-3.1-flash-lite-image` | Nano Banana 2 Lite — fastest and most cost-efficient; 1K resolution only. |
 | Gemini 3 Pro Image | `gemini-3-pro-image-preview` | Nano Banana Pro — higher quality, slower. |
 | Gemini 2.5 Flash Image | `gemini-2.5-flash-image` | Previous generation. Still solid. |
 
@@ -43,7 +44,7 @@ This is a unified node — it handles text-to-image, image editing, and multi-im
 | prompt | STRING | — | Your image generation prompt. Required. |
 | model | COMBO | gemini-3.1-flash-image | Which Gemini image model to use. |
 | aspect_ratio | COMBO | 16:9 | Output aspect ratio. 12 options: 1:1, 2:3, 3:2, 3:4, 4:1, 4:3, 4:5, 5:4, 8:1, 9:16, 16:9, 21:9. |
-| resolution | COMBO | 1K | Output resolution: 1K, 2K, or 4K. |
+| resolution | COMBO | 1K | Output resolution: 1K, 2K, or 4K. Nano Banana 2 Lite supports 1K only (the dropdown updates automatically). |
 | seed | INT | 0 | Reproducibility seed. 0 = random each run. Max 2,147,483,647. |
 | temperature | FLOAT | 1.0 | Creativity control. Range 0.0–2.0. Higher = more creative/varied. |
 | image1, image2, image3 | IMAGE | — | Optional input images for editing, style transfer, or composition. Batched images are iterated automatically. |

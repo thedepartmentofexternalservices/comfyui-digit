@@ -14,6 +14,12 @@ import torch
 from PIL import Image
 
 from .gcp_config import resolve_gcp_config, get_gcp_access_token, build_vertex_url, default_project, default_region
+from .gemini_image_models import (
+    GEMINI_IMAGE_MODELS,
+    DEFAULT_GEMINI_IMAGE_MODEL,
+    MODELS_1K_ONLY,
+    RESOLUTIONS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -79,12 +85,7 @@ class DigitBatchGeminiImage:
     """Batch Gemini image generation: iterate over a folder of source images,
     use an LLM to vary the prompt, and generate multiple outputs per image."""
 
-    IMAGE_MODELS = [
-        "gemini-3.1-flash-image-preview",
-        "gemini-3-pro-image-preview",
-        "gemini-2.5-flash-image",
-        "gemini-2.5-flash",
-    ]
+    IMAGE_MODELS = GEMINI_IMAGE_MODELS
 
     LLM_MODELS = [
         "gemini-2.5-flash",
@@ -103,7 +104,7 @@ class DigitBatchGeminiImage:
         "4:5", "5:4", "8:1", "9:16", "16:9", "21:9",
     ]
 
-    RESOLUTIONS = ["1K", "2K", "4K"]
+    RESOLUTIONS = RESOLUTIONS
 
     THINKING_LEVELS = ["MINIMAL", "HIGH"]
 
@@ -137,7 +138,7 @@ class DigitBatchGeminiImage:
                     "max": 50,
                     "tooltip": "How many prompt variations (and image generations) per source image.",
                 }),
-                "image_model": (cls.IMAGE_MODELS, {"default": cls.IMAGE_MODELS[0]}),
+                "image_model": (cls.IMAGE_MODELS, {"default": DEFAULT_GEMINI_IMAGE_MODEL}),
                 "llm_model": (cls.LLM_MODELS, {
                     "default": cls.LLM_MODELS[0],
                     "tooltip": "Gemini model used to generate prompt variations.",
@@ -345,6 +346,10 @@ class DigitBatchGeminiImage:
             raise ValueError(f"Image folder not found: {image_folder}")
         if not prompt.strip():
             raise ValueError("Prompt is required.")
+        if image_model in MODELS_1K_ONLY and resolution != "1K":
+            raise ValueError(
+                f"Model {image_model} (Nano Banana 2 Lite) only supports 1K resolution, got {resolution}."
+            )
 
         project, region = resolve_gcp_config(gcp_project_id, gcp_region)
         token = get_gcp_access_token()
@@ -420,8 +425,8 @@ class DigitBatchGeminiImage:
 
                     # Step 2: Build image generation request (direct REST API)
                     parts = [
-                        {"inlineData": {"mimeType": "image/png", "data": source_b64}},
                         {"text": varied_prompt},
+                        {"inlineData": {"mimeType": "image/png", "data": source_b64}},
                     ]
 
                     image_config = {
